@@ -5,7 +5,7 @@ from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session, sessionmaker
 
-import app.models  # noqa: F401 — populates Base.metadata with every table
+import app.models  # noqa: F401
 from app.core.config import settings
 from app.db.base import Base
 from app.db.session import get_db
@@ -17,12 +17,6 @@ TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engin
 
 @pytest.fixture(scope="session", autouse=True)
 def _create_schema() -> None:
-    # Tables are created once per test session and left in place (not dropped):
-    # Seat/Ticket have a circular FK (seat.current_ticket_id <-> ticket.seat_id)
-    # that SQLAlchemy's metadata.drop_all cannot order without explicit
-    # use_alter naming on the constraints, which is a model-level concern
-    # outside this task's scope. create_all is idempotent (checkfirst=True by
-    # default), so re-running the suite against the same DB is safe.
     Base.metadata.create_all(engine)
 
 

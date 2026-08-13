@@ -23,7 +23,6 @@ router = APIRouter(prefix="/events", tags=["events"])
 
 
 def _row_label(row_index: int) -> str:
-    """Excel-style row label: 0->A, 1->B, ..., 25->Z, 26->AA, 27->AB, ..."""
     label = ""
     n = row_index + 1
     while n > 0:
@@ -67,7 +66,7 @@ def create_event(
         status=EventStatus.PUBLISHED,
     )
     db.add(event)
-    db.flush()  # populate event.id (column default is applied at flush time)
+    db.flush()
 
     seats = [
         Seat(

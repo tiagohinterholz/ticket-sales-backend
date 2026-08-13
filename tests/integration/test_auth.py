@@ -62,8 +62,6 @@ class TestLogin:
             json={"email": "never-registered@example.com", "password": "whatever"},
         )
 
-        # Spec AUTH AC4: the error must not reveal whether the email exists —
-        # both failure modes must be indistinguishable to the caller.
         assert unknown_email_response.status_code == 401
         assert unknown_email_response.status_code == wrong_password_response.status_code
         assert unknown_email_response.json() == wrong_password_response.json()

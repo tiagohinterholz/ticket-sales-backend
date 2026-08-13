@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from uuid import uuid4
 
 import jwt
@@ -48,7 +48,7 @@ class TestJWTRoundtrip:
         assert claims["role"] == Role.ORGANIZER.value
 
     def test_expired_token_is_rejected(self):
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         expired_payload = {
             "sub": str(uuid4()),
             "role": Role.CUSTOMER.value,

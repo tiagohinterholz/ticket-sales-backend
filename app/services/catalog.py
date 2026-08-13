@@ -1,5 +1,3 @@
-"""TMDb movie catalog client, used to back event creation with a real film."""
-
 from dataclasses import dataclass
 
 import httpx
@@ -12,11 +10,7 @@ REQUEST_TIMEOUT_SECONDS = 5.0
 
 
 class CatalogUnavailableError(Exception):
-    """Raised when the TMDb catalog cannot be reached or responds with an error.
-
-    Callers (routers) should map this to a 502 without ever letting the
-    underlying httpx exception leak out as a generic 500.
-    """
+    pass
 
 
 @dataclass(frozen=True)
