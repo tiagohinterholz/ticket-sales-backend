@@ -177,7 +177,7 @@ T36 → T37 → T38 → T39
 
 ### T05: Model `User` + enum `Role`
 
-**What**: `app/models/user.py` — `class User(Base, UUIDPKMixin, TimestampMixin)`: `email unique, password_hash, role[CLIENTE|ORGANIZADOR|PORTARIA], name`. `id`/`created_at`/`updated_at` vêm dos mixins de T04, não redeclarados.
+**What**: `app/models/user.py` — `class User(Base, UUIDPKMixin, TimestampMixin)`: `email unique, password_hash, role[CUSTOMER|ORGANIZER|GATE_STAFF], name`. `id`/`created_at`/`updated_at` vêm dos mixins de T04, não redeclarados.
 **Where**: `app/models/user.py`
 **Depends on**: T04
 **Reuses**: `app/models/mixins.py` (T04)
@@ -197,7 +197,7 @@ T36 → T37 → T38 → T39
 
 ### T06: Models `Event` + `Seat`
 
-**What**: `app/models/event.py` (`class Event(Base, UUIDPKMixin, TimestampMixin)`: `organizer_id fk`, `tmdb_movie_id`, `title`, `poster_url`, `venue`, `starts_at`, `rows`, `seats_per_row`, `capacity`, `price_cents`, `status`), `app/models/seat.py` (`class Seat(Base, UUIDPKMixin, TimestampMixin)`: `event_id fk`, `row_label`, `seat_number`, `status[LIVRE|HOLD|VENDIDO]`, `current_ticket_id fk nullable`, `UNIQUE(event_id, row_label, seat_number)`).
+**What**: `app/models/event.py` (`class Event(Base, UUIDPKMixin, TimestampMixin)`: `organizer_id fk`, `tmdb_movie_id`, `title`, `poster_url`, `venue`, `starts_at`, `rows`, `seats_per_row`, `capacity`, `price_cents`, `status`), `app/models/seat.py` (`class Seat(Base, UUIDPKMixin, TimestampMixin)`: `event_id fk`, `row_label`, `seat_number`, `status[AVAILABLE|HOLD|SOLD]`, `current_ticket_id fk nullable`, `UNIQUE(event_id, row_label, seat_number)`).
 **Where**: `app/models/event.py`, `app/models/seat.py`
 **Depends on**: T05
 **Reuses**: `app/models/mixins.py` (T04)
@@ -299,7 +299,7 @@ T36 → T37 → T38 → T39
 
 ### T11: Router de autenticação (`/auth`)
 
-**What**: `POST /auth/register` (cria `CLIENTE`, único self-signup), `POST /auth/login` (retorna JWT), `GET /auth/me`.
+**What**: `POST /auth/register` (cria `CUSTOMER`, único self-signup), `POST /auth/login` (retorna JWT), `GET /auth/me`.
 **Where**: `app/api/v1/auth.py`, `app/schemas/auth.py`
 **Depends on**: T10, T05
 **Requirement**: AUTH-01, AUTH-04
@@ -307,7 +307,7 @@ T36 → T37 → T38 → T39
 **Tools**: MCP: NONE / Skill: NONE
 
 **Done when**:
-- [ ] Registro cria usuário `CLIENTE`, e-mail duplicado retorna 409
+- [ ] Registro cria usuário `CUSTOMER`, e-mail duplicado retorna 409
 - [ ] Login correto retorna 200 + token; login errado retorna 401 genérico (não revela se e-mail existe)
 - [ ] `/auth/me` sem token retorna 401; com token retorna dados do usuário
 - [ ] Gate check passa: `docker compose up -d db && uv run pytest -q`
@@ -366,7 +366,7 @@ T36 → T37 → T38 → T39
 
 ### T14: `services/booking.py` — hold atômico + expiração
 
-**What**: `hold_seat(event_id, seat_id, user_id) -> Ticket` (`UPDATE seats SET status='HOLD' WHERE id=? AND status='LIVRE'`; 0 linhas → `SeatUnavailableError`; cria `Ticket(status=HELD, expires_at=now+SEAT_HOLD_MINUTES)`), `sweep_expired_holds(event_id=None) -> int` (libera holds vencidos em lote), `cancel_ticket(ticket, actor) -> Ticket` (usada por T21 — regra de janela de 2h + libera assento).
+**What**: `hold_seat(event_id, seat_id, user_id) -> Ticket` (`UPDATE seats SET status='HOLD' WHERE id=? AND status='AVAILABLE'`; 0 linhas → `SeatUnavailableError`; cria `Ticket(status=HELD, expires_at=now+SEAT_HOLD_MINUTES)`), `sweep_expired_holds(event_id=None) -> int` (libera holds vencidos em lote), `cancel_ticket(ticket, actor) -> Ticket` (usada por T21 — regra de janela de 2h + libera assento).
 **Where**: `app/services/booking.py`
 **Depends on**: T06, T07
 **Requirement**: BOOKING-03, BOOKING-04, BOOKING-05, CANCEL-01, CANCEL-02, CANCEL-03
@@ -374,8 +374,8 @@ T36 → T37 → T38 → T39
 **Tools**: MCP: NONE / Skill: NONE
 
 **Done when**:
-- [ ] `hold_seat` num assento `LIVRE` cria `Ticket HELD` e muda `seat.status`
-- [ ] `hold_seat` num assento já `HOLD`/`VENDIDO` levanta `SeatUnavailableError`
+- [ ] `hold_seat` num assento `AVAILABLE` cria `Ticket HELD` e muda `seat.status`
+- [ ] `hold_seat` num assento já `HOLD`/`SOLD` levanta `SeatUnavailableError`
 - [ ] **Prova de concorrência**: duas threads chamando `hold_seat` pro mesmo assento simultaneamente (sessões de DB separadas) — exatamente uma sucede, a outra recebe `SeatUnavailableError`
 - [ ] `sweep_expired_holds` libera hold com `expires_at` no passado e não mexe em holds ainda válidos
 - [ ] `cancel_ticket` dentro da janela de 2h libera o assento; fora da janela levanta `CancelWindowError`; ticket `USED`/`TRANSFERRED` levanta `InvalidTicketStateError`
@@ -400,7 +400,7 @@ T36 → T37 → T38 → T39
 **Done when**:
 - [ ] Hold de assento livre retorna 201 com `expires_at`
 - [ ] Hold de assento já ocupado retorna 409 (contrato HTTP — a prova de corrida já está em T14)
-- [ ] Só `CLIENTE` autenticado acessa (401/403 nos outros casos)
+- [ ] Só `CUSTOMER` autenticado acessa (401/403 nos outros casos)
 - [ ] Gate check passa: `docker compose up -d db && uv run pytest -q`
 - [ ] Test count: ≥4 testes passam
 
@@ -421,7 +421,7 @@ T36 → T37 → T38 → T39
 
 **Done when**:
 - [ ] App sobe com o scheduler ativo (log confirma início do job)
-- [ ] Teste manual: criar hold com `SEAT_HOLD_MINUTES` baixo via env de teste, esperar o ciclo, ver assento voltar a `LIVRE` sem chamada externa
+- [ ] Teste manual: criar hold com `SEAT_HOLD_MINUTES` baixo via env de teste, esperar o ciclo, ver assento voltar a `AVAILABLE` sem chamada externa
 
 **Tests**: none (smoke coberto pelo teste de integração de T14; scheduler em si não precisa de teste dedicado — é fiação de infra)
 **Gate**: build
@@ -453,7 +453,7 @@ T36 → T37 → T38 → T39
 
 ### T18: `services/ticketing.py` — emissão e validação de QR
 
-**What**: `issue(ticket) -> str` (gera `qr_secret`, monta payload `f"{ticket.id}.{qr_secret}"`, assina HMAC-SHA256 com `QR_SECRET_KEY`), `validate(raw_token, gate_event_id) -> GateResult` (`INVALIDO`/`JA_UTILIZADO`/`EVENTO_ERRADO`/`VALIDO`; transição atômica `UPDATE tickets SET status='USED' WHERE id=? AND status='PAID'`).
+**What**: `issue(ticket) -> str` (gera `qr_secret`, monta payload `f"{ticket.id}.{qr_secret}"`, assina HMAC-SHA256 com `QR_SECRET_KEY`), `validate(raw_token, gate_event_id) -> GateResult` (`INVALID`/`ALREADY_USED`/`WRONG_EVENT`/`VALID`; transição atômica `UPDATE tickets SET status='USED' WHERE id=? AND status='PAID'`).
 **Where**: `app/services/ticketing.py`
 **Depends on**: T07
 **Requirement**: GATE-01, GATE-02, GATE-03, GATE-04, GATE-06
@@ -462,11 +462,11 @@ T36 → T37 → T38 → T39
 
 **Done when**:
 - [ ] `issue` gera token válido e verificável
-- [ ] `validate` com assinatura adulterada retorna `INVALIDO`
-- [ ] `validate` de ticket `PAID` do evento certo retorna `VALIDO` e muda status pra `USED`
-- [ ] `validate` de ticket já `USED` retorna `JA_UTILIZADO` sem alterar `used_at`
-- [ ] `validate` com `event_id` diferente retorna `EVENTO_ERRADO`
-- [ ] **Prova de concorrência**: duas chamadas simultâneas de `validate` pro mesmo ticket — exatamente uma retorna `VALIDO`, a outra `JA_UTILIZADO`
+- [ ] `validate` com assinatura adulterada retorna `INVALID`
+- [ ] `validate` de ticket `PAID` do evento certo retorna `VALID` e muda status pra `USED`
+- [ ] `validate` de ticket já `USED` retorna `ALREADY_USED` sem alterar `used_at`
+- [ ] `validate` com `event_id` diferente retorna `WRONG_EVENT`
+- [ ] **Prova de concorrência**: duas chamadas simultâneas de `validate` pro mesmo ticket — exatamente uma retorna `VALID`, a outra `ALREADY_USED`
 - [ ] Gate check passa: `docker compose up -d db && uv run pytest -q`
 - [ ] Test count: ≥8 testes passam
 
@@ -530,7 +530,7 @@ T36 → T37 → T38 → T39
 **Tools**: MCP: NONE / Skill: NONE
 
 **Done when**:
-- [ ] Cancelamento >2h antes do evento retorna 200, ticket `CANCELLED`, assento volta a `LIVRE`
+- [ ] Cancelamento >2h antes do evento retorna 200, ticket `CANCELLED`, assento volta a `AVAILABLE`
 - [ ] Cancelamento <2h antes retorna 422 com mensagem clara
 - [ ] Cancelamento de ticket `USED`/`TRANSFERRED` retorna 422
 - [ ] Gate check passa: `docker compose up -d db && uv run pytest -q`
@@ -544,7 +544,7 @@ T36 → T37 → T38 → T39
 
 ### T22: Router de portaria (`POST /gate/validate`)
 
-**What**: Endpoint `PORTARIA`-only, aceita `{token}` (do scanner) ou `{manual_code}` (equivalente ao token digitado), chama `ticketing.validate`, retorna `VALIDO`/`INVALIDO`/`JA_UTILIZADO`/`EVENTO_ERRADO` + dados do assento/cliente quando `VALIDO`.
+**What**: Endpoint `GATE_STAFF`-only, aceita `{token}` (do scanner) ou `{manual_code}` (equivalente ao token digitado), chama `ticketing.validate`, retorna `VALID`/`INVALID`/`ALREADY_USED`/`WRONG_EVENT` + dados do assento/cliente quando `VALID`.
 **Where**: `app/api/v1/gate.py`
 **Depends on**: T18, T11
 **Requirement**: GATE-01..05
@@ -553,7 +553,7 @@ T36 → T37 → T38 → T39
 
 **Done when**:
 - [ ] Cada um dos 4 resultados é alcançável via chamada HTTP com fixtures correspondentes (contrato — a atomicidade em si já está provada em T18)
-- [ ] Só `PORTARIA` acessa (403 pros outros papéis)
+- [ ] Só `GATE_STAFF` acessa (403 pros outros papéis)
 - [ ] `manual_code` produz exatamente o mesmo resultado que o `token` do QR pro mesmo ingresso
 - [ ] Gate check passa: `docker compose up -d db && uv run pytest -q`
 - [ ] Test count: ≥6 testes passam
@@ -621,7 +621,7 @@ T36 → T37 → T38 → T39
 
 **Done when**:
 - [ ] Lista só mostra eventos do organizador autenticado, com `% vendido` correto
-- [ ] Mapa de assentos reflete `LIVRE`/`HOLD`/`VENDIDO`/histórico de `CANCELLED` corretamente
+- [ ] Mapa de assentos reflete `AVAILABLE`/`HOLD`/`SOLD`/histórico de `CANCELLED` corretamente
 - [ ] Organizador não acessa eventos de outro organizador (403/404)
 - [ ] Gate check passa: `docker compose up -d db && uv run pytest -q`
 - [ ] Test count: ≥5 testes passam
@@ -850,7 +850,7 @@ Não é uma task de código — não gera commit próprio; correções decorrent
 
 ### T36: Seed de dados de teste
 
-**What**: `app/seed.py` (idempotente — checa existência antes de inserir): 1 organizador, 2 clientes, 1 portaria, ≥1 evento publicado com mapa de assentos variado (alguns `LIVRE`, ao menos 1 `HOLD`, ao menos 1 `VENDIDO` com ticket `PAID` pronto pra demo de portaria).
+**What**: `app/seed.py` (idempotente — checa existência antes de inserir): 1 organizador, 2 clientes, 1 portaria, ≥1 evento publicado com mapa de assentos variado (alguns `AVAILABLE`, ao menos 1 `HOLD`, ao menos 1 `SOLD` com ticket `PAID` pronto pra demo de portaria).
 **Where**: `app/seed.py`
 **Depends on**: T05, T06, T07, T08
 **Requirement**: dados de teste (requisito não funcional do PDF)

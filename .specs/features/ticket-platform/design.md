@@ -138,7 +138,7 @@ class TimestampMixin:
 # users(Base, UUIDPKMixin, TimestampMixin)
 email: str (unique)
 password_hash: str
-role: enum[CLIENTE, ORGANIZADOR, PORTARIA]
+role: enum[CUSTOMER, ORGANIZER, GATE_STAFF]
 name: str
 
 # events(Base, UUIDPKMixin, TimestampMixin)
@@ -158,7 +158,7 @@ status: enum[PUBLISHED, CANCELLED]
 event_id: UUID (fk -> events.id)
 row_label: str                    # "A", "B", ...
 seat_number: int
-status: enum[LIVRE, HOLD, VENDIDO]   # fonte de verdade do mapa — atualizado só dentro de transação junto com tickets
+status: enum[AVAILABLE, HOLD, SOLD]   # fonte de verdade do mapa — atualizado só dentro de transação junto com tickets
 current_ticket_id: UUID | None (fk -> tickets.id)
 UNIQUE(event_id, row_label, seat_number)
 
@@ -214,7 +214,7 @@ Abstração é aplicada só onde há duplicação real detectada acima (models +
 ### `services/booking.py` — reserva e lock de assento
 - **Purpose**: Garantir hold atômico de assento (nenhum double-booking) e expiração automática.
 - **Interfaces**:
-  - `hold_seat(event_id, seat_id, user_id) -> Ticket` — `UPDATE seats SET status='HOLD' WHERE id=? AND status='LIVRE'` dentro da transação; 0 linhas afetadas = `SeatUnavailableError`. Só então cria o `ticket` HELD e atualiza `seat.current_ticket_id`.
+  - `hold_seat(event_id, seat_id, user_id) -> Ticket` — `UPDATE seats SET status='HOLD' WHERE id=? AND status='AVAILABLE'` dentro da transação; 0 linhas afetadas = `SeatUnavailableError`. Só então cria o `ticket` HELD e atualiza `seat.current_ticket_id`.
   - `sweep_expired_holds() -> int` — libera holds vencidos (`expires_at < now()`), roda no lifespan via APScheduler a cada 60s **e** de forma lazy sempre que o mapa de assentos é lido (garante consistência mesmo se o scheduler atrasar).
 - **Dependencies**: `db session`
 - **Reuses**: n/a (greenfield)
@@ -227,7 +227,7 @@ Abstração é aplicada só onde há duplicação real detectada acima (models +
 - **Purpose**: Gerar `qr_secret`, montar payload assinado, validar na portaria.
 - **Interfaces**:
   - `issue(ticket) -> str` (token do QR) — `payload = f"{ticket.id}.{qr_secret}"`, assina com HMAC-SHA256 usando `QR_SECRET_KEY` do servidor.
-  - `validate(raw_token, gate_event_id) -> GateResult` — decompõe, recalcula HMAC (comparação em tempo constante), busca ticket por `id`+`qr_secret`. Resultado: `INVALIDO` (assinatura não bate ou ticket não existe) | `JA_UTILIZADO` (status já `USED`) | `EVENTO_ERRADO` (`ticket.event_id != gate_event_id`) | `VALIDO` (transição atômica `UPDATE tickets SET status='USED' WHERE id=? AND status='PAID'`, 0 linhas afetadas = corrida perdida = trata como `JA_UTILIZADO`).
+  - `validate(raw_token, gate_event_id) -> GateResult` — decompõe, recalcula HMAC (comparação em tempo constante), busca ticket por `id`+`qr_secret`. Resultado: `INVALID` (assinatura não bate ou ticket não existe) | `ALREADY_USED` (status já `USED`) | `WRONG_EVENT` (`ticket.event_id != gate_event_id`) | `VALID` (transição atômica `UPDATE tickets SET status='USED' WHERE id=? AND status='PAID'`, 0 linhas afetadas = corrida perdida = trata como `ALREADY_USED`).
 
 ### `services/transfer.py` — transferência de titularidade
 - **Purpose**: Handshake de transferência de ingresso.
@@ -250,10 +250,10 @@ Abstração é aplicada só onde há duplicação real detectada acima (models +
 
 | Cenário | Tratamento | Impacto no usuário |
 |---|---|---|
-| Assento já em HOLD/VENDIDO no momento do clique | `409 Conflict` com `SeatUnavailableError` | "Assento indisponível, escolha outro" — mapa recarrega |
+| Assento já em HOLD/SOLD no momento do clique | `409 Conflict` com `SeatUnavailableError` | "Assento indisponível, escolha outro" — mapa recarrega |
 | Hold expira durante checkout | Pagamento rejeitado com `410 Gone` | "Tempo esgotado, escolha o assento novamente" |
 | TMDb indisponível/timeout | `502` tratado no router, evento não é persistido | "Catálogo indisponível no momento, tente novamente" |
-| QR corrompido/assinatura inválida | `INVALIDO` (não vaza motivo técnico) | "Ingresso inválido" |
+| QR corrompido/assinatura inválida | `INVALID` (não vaza motivo técnico) | "Ingresso inválido" |
 | Dois scans simultâneos do mesmo ingresso | 2ª UPDATE afeta 0 linhas → tratada como já usada | "Já utilizado" pra quem chegou depois |
 | Login com credenciais erradas | `401` genérico | "E-mail ou senha inválidos" (nunca indica qual campo) |
 | Cancelamento fora da janela de 2h | `422` com motivo | "Cancelamento permitido só até 2h antes do evento" |
@@ -281,7 +281,7 @@ Abstração é aplicada só onde há duplicação real detectada acima (models +
 | ORM/migrations | SQLAlchemy 2.0 + Alembic | Padrão de facto em FastAPI, controle explícito de schema via migration versionada |
 | Auth token | JWT sem refresh token (expira em 60min, relogin simples) | Prazo de 7 dias não justifica fluxo de refresh; recuperação de senha já está fora de escopo pelo PDF |
 | Hash de senha | `bcrypt` (lib direta, não passlib) | Padrão consolidado, sem dependência extra com manutenção incerta |
-| Concorrência de assento | `UPDATE ... WHERE status='LIVRE'` atômico (não `SELECT FOR UPDATE` explícito) | Mesma garantia de atomicidade, menos código, sem risco de esquecer o lock em algum caminho |
+| Concorrência de assento | `UPDATE ... WHERE status='AVAILABLE'` atômico (não `SELECT FOR UPDATE` explícito) | Mesma garantia de atomicidade, menos código, sem risco de esquecer o lock em algum caminho |
 | Estado do mapa de assentos | Denormalizado em `seats.status`, atualizado só dentro da mesma transação que muda `tickets` | Leitura do mapa é o caminho mais quente da aplicação; evita agregação a cada carregamento de tela |
 | QR scanning no front | `html5-qrcode` (npm) | API pronta de câmera + permissões, menos código de integração que montar sobre `@zxing` puro, dentro do prazo |
 | Geração visual do QR | `qrcode.react` | Componente React direto, sem geração server-side de imagem |

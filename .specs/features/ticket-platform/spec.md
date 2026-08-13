@@ -142,9 +142,9 @@ Um organizador precisa publicar eventos (sessões de cinema, no nosso recorte) a
 **Why P2**: Tecnicamente é pré-requisito de tudo acima (por isso entra nas tasks desde o início), mas como "história" fica documentada à parte por atravessar todas as outras.
 
 **Acceptance Criteria**:
-1. WHEN uma pessoa se cadastra publicamente THEN o sistema SHALL criar uma conta com papel `CLIENTE` (único self-signup disponível).
-2. WHEN um usuário `ORGANIZADOR` tenta acessar rotas de outro organizador ou de cliente/portaria THEN o sistema SHALL negar com 403.
-3. WHEN um usuário `PORTARIA` tenta acessar dados de pagamento ou criar eventos THEN o sistema SHALL negar com 403.
+1. WHEN uma pessoa se cadastra publicamente THEN o sistema SHALL criar uma conta com papel `CUSTOMER` (único self-signup disponível).
+2. WHEN um usuário `ORGANIZER` tenta acessar rotas de outro organizador ou de cliente/portaria THEN o sistema SHALL negar com 403.
+3. WHEN um usuário `GATE_STAFF` tenta acessar dados de pagamento ou criar eventos THEN o sistema SHALL negar com 403.
 4. WHEN o login falha (credenciais inválidas) THEN o sistema SHALL retornar erro genérico, sem indicar se o e-mail existe ou não.
 
 **Independent Test**: Logar com cada um dos 3 usuários seed e confirmar que cada um só vê seu próprio menu/rotas.

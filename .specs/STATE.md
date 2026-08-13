@@ -34,6 +34,22 @@
 - **Date**: 2026-08-12
 - **Status**: active
 
+### AD-005
+- **Decision**: Todo enum de código (valores de `Role`, `Seat.status`, `GateResult`, etc.) usa identificadores em **inglês**, mesmo quando o domínio/prosa do produto é em português. `Role`: `CUSTOMER`/`ORGANIZER`/`GATE_STAFF` (não `CLIENTE`/`ORGANIZADOR`/`PORTARIA`). `Seat.status`: `AVAILABLE`/`HOLD`/`SOLD` (não `LIVRE`/`HOLD`/`VENDIDO`). `GateResult`: `VALID`/`INVALID`/`ALREADY_USED`/`WRONG_EVENT` (não `VALIDO`/`INVALIDO`/`JA_UTILIZADO`/`EVENTO_ERRADO`). `Ticket.status`, `PaymentAttempt.result`, `TransferInvite.status` já estavam em inglês desde o design original — ficam como estavam.
+- **Reason**: Pedido explícito do usuário ao ver `Role` em português no código; aplicado por consistência a todos os outros enums do domínio para não deixar a base de código misturando os dois idiomas.
+- **Trade-off**: Nenhum — é puro alinhamento de nomenclatura, já propagado em `spec.md`/`design.md`/`tasks.md` (busca+substituição) antes de qualquer código additional ser escrito sobre esses enums. Nomes de papéis em prosa (Organizador/Cliente/Portaria) continuam em português — só os identificadores de código mudam.
+- **Scope**: Todo enum do back-end, em qualquer feature futura.
+- **Date**: 2026-08-12
+- **Status**: active
+
+### AD-006
+- **Decision**: Nenhum comentário de código (`#` inline, docstrings, banners de módulo) em nenhum arquivo do projeto — nem nos gerados por scaffolding de terceiros (ex.: templates do `npm create vite`, docstrings padrão do Alembic). Código deve se explicar por nomes claros; qualquer contexto que valeria um comentário vai pra mensagem do commit ou pra `.specs/` (design.md, este arquivo), nunca inline.
+- **Reason**: Pedido explícito e enfático do usuário, repetido duas vezes.
+- **Trade-off**: Racionais não-óbvios (ex.: por que a migration reordena tabelas manualmente, por que o downgrade dropa ENUMs explicitamente, por que o schema de teste não é dropado) ficam só na mensagem do commit correspondente ou em `design.md`/`STATE.md` — não no arquivo em si. Quem for ler só o código sem olhar o histórico/specs perde esse contexto; aceitável dado o pedido explícito.
+- **Scope**: Todo o back-end e front-end, em qualquer feature futura.
+- **Date**: 2026-08-13
+- **Status**: active
+
 ## Handoff
 
 - **Feature**: ticket-platform (`.specs/features/ticket-platform/`, vive no repo `ticket-sales-platform-api` — ver AD-004)
