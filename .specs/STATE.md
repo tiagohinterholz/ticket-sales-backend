@@ -50,6 +50,14 @@
 - **Date**: 2026-08-13
 - **Status**: active
 
+### AD-007
+- **Decision**: Testes de integração usam as factories compartilhadas em `tests/integration/factories.py` (`make_user`, `auth_headers`, `make_event`, `make_seat`, `make_ticket`) — nunca redeclarar `_make_user`/`_make_event`/`_make_seat`/`_make_ticket` locais em cada arquivo de teste.
+- **Reason**: 4 arquivos de teste (T14, T15, T17, T19) tinham chegado com cópias quase idênticas desses helpers — apontado pelo usuário, consolidado numa única fábrica.
+- **Trade-off**: `make_ticket` tem `expires_at` default `None` (não `now+5min`) — quem precisa de um ticket `HELD` com hold ainda válido deve passar `expires_at=datetime.now(UTC) + timedelta(minutes=5)` explicitamente. `make_seat` tem `status` default `AVAILABLE` — cenários que precisam de assento `HOLD`/`SOLD` passam explicitamente.
+- **Scope**: Todo teste de integração futuro (T18, T20-T25, T36+) — antes de escrever um helper de setup, checar se já existe em `factories.py`; se precisar de um novo (ex.: `make_transfer_invite`), adicionar lá, não localmente.
+- **Date**: 2026-08-13
+- **Status**: active
+
 ## Handoff
 
 - **Feature**: ticket-platform (`.specs/features/ticket-platform/`, vive no repo `ticket-sales-platform-api` — ver AD-004)
