@@ -8,6 +8,7 @@ from app.api.v1.auth import router as auth_router
 from app.api.v1.bookings import router as bookings_router
 from app.api.v1.events import router as events_router
 from app.api.v1.gate import router as gate_router
+from app.api.v1.organizer import router as organizer_router
 from app.api.v1.payments import router as payments_router
 from app.api.v1.tickets import router as tickets_router
 from app.api.v1.transfers import router as transfers_router
@@ -48,6 +49,7 @@ app.include_router(payments_router)
 app.include_router(tickets_router)
 app.include_router(gate_router)
 app.include_router(transfers_router)
+app.include_router(organizer_router)
 
 
 @app.get("/health")
