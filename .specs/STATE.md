@@ -36,11 +36,11 @@
 
 ## Handoff
 
-- **Feature**: ticket-platform (`.specs/features/ticket-platform/`)
-- **Phase / Task**: Tasks — spec.md, context.md e design.md aprovados; tasks.md escrito (T01–T38) com matriz de testes, mapa de paralelismo e validações de granularidade/co-location. Aguardando: (1) resposta do usuário sobre MCPs/skills por task, (2) init do git, antes de começar Execute em T01.
-- **Completed**: spec.md, context.md, design.md, tasks.md
+- **Feature**: ticket-platform (`.specs/features/ticket-platform/`, vive no repo `ticket-sales-platform-api` — ver AD-004)
+- **Phase / Task**: Tasks aprovadas (T01–T39, 5 fases, execução via 1 sub-agente por fase — usuário confirmou). Dois repos git já inicializados e com primeiro commit. Próximo: disparar o worker da Fase 1 (T01 scaffold+git da API já parcialmente feito manualmente — falta o conteúdo real de T01/T02: pyproject/uv, FastAPI mínimo, Vite scaffold, Dockerfiles).
+- **Completed**: spec.md, context.md, design.md, tasks.md; `git init` dos 2 repos (`backend/` = `ticket-sales-platform-api`, `frontend/` = `ticket-sales-platform-web`); primeiro commit em cada um (`.specs/`+`.gitignore` na API, `.gitignore` no web)
 - **In-progress**: nenhum arquivo em edição
-- **Next step**: perguntar ferramentas por task (MCP/skill) → `git init` + primeiro commit (estrutura `.specs/`) → iniciar Execute pela Fase 1 (T01: scaffold do back-end)
+- **Next step**: disparar sub-agente da Fase 1 (T01: scaffold FastAPI/uv/Dockerfile no repo API; T02: scaffold Vite/React/Router/React Query/Dockerfile no repo web; T03/T04 na sequência)
 - **Blockers**: none
-- **Uncommitted files**: todo o projeto (repositório ainda não é git — init pendente)
-- **Branch**: n/a (git ainda não inicializado)
+- **Uncommitted files**: none (working tree limpa em ambos os repos após o commit inicial)
+- **Branch**: `main` em ambos os repos
