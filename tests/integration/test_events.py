@@ -5,28 +5,12 @@ from fastapi.testclient import TestClient
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.core.security import create_access_token, hash_password
 from app.models.event import Event
 from app.models.seat import Seat, SeatStatus
 from app.models.user import Role, User
 from app.services.catalog import CatalogUnavailableError, MovieResult
-
-
-def _make_user(db_session: Session, role: Role, email: str | None = None) -> User:
-    user = User(
-        email=email or f"{role.value.lower()}-{uuid.uuid4()}@example.com",
-        password_hash=hash_password("irrelevant"),
-        role=role,
-        name="Test User",
-    )
-    db_session.add(user)
-    db_session.commit()
-    db_session.refresh(user)
-    return user
-
-
-def _auth_headers(user: User) -> dict[str, str]:
-    return {"Authorization": f"Bearer {create_access_token(user)}"}
+from tests.integration.factories import auth_headers as _auth_headers
+from tests.integration.factories import make_user as _make_user
 
 
 def _movie(title: str = "The Matrix", tmdb_id: int | None = None) -> MovieResult:
