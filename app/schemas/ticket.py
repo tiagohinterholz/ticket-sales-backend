@@ -12,3 +12,7 @@ class TicketRead(BaseReadSchema):
     status: TicketStatus
     held_at: datetime
     expires_at: datetime | None
+
+
+class TicketDetailRead(TicketRead):
+    qr_token: str | None
