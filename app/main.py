@@ -1,10 +1,12 @@
 from fastapi import FastAPI
 
 from app.api.v1.auth import router as auth_router
+from app.api.v1.events import router as events_router
 
 app = FastAPI(title="Ticket Sales Platform API")
 
 app.include_router(auth_router)
+app.include_router(events_router)
 
 
 @app.get("/health")
