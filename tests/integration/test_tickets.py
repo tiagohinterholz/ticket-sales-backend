@@ -1,10 +1,10 @@
 import uuid
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 
 from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session
 
-from app.models.seat import SeatStatus
+from app.models.seat import Seat, SeatStatus
 from app.models.ticket import TicketStatus
 from app.models.user import Role
 from app.services import ticketing
@@ -204,3 +204,90 @@ class TestGetTicketDetail:
         response = client.get(f"/tickets/{ticket.id}")
 
         assert response.status_code == 401
+
+
+class TestCancelTicketEndpoint:
+    def test_cancel_more_than_2h_before_event_returns_200_cancelled_and_frees_seat(
+        self, client: TestClient, db_session: Session
+    ):
+        organizer = make_user(db_session, Role.ORGANIZER)
+        customer = make_user(db_session, Role.CUSTOMER)
+        event = make_event(
+            db_session, organizer, starts_at=datetime.now(UTC) + timedelta(hours=5)
+        )
+        seat = make_seat(db_session, event, status=SeatStatus.SOLD)
+        ticket = make_ticket(
+            db_session, event, seat, customer, TicketStatus.PAID,
+            paid_at=datetime.now(UTC),
+        )
+
+        response = client.post(
+            f"/tickets/{ticket.id}/cancel", headers=auth_headers(customer)
+        )
+
+        assert response.status_code == 200
+        assert response.json()["status"] == "CANCELLED"
+        db_session.expire_all()
+        refreshed_seat = db_session.get(Seat, seat.id)
+        assert refreshed_seat.status == SeatStatus.AVAILABLE
+
+    def test_cancel_less_than_2h_before_event_returns_422_with_clear_message(
+        self, client: TestClient, db_session: Session
+    ):
+        organizer = make_user(db_session, Role.ORGANIZER)
+        customer = make_user(db_session, Role.CUSTOMER)
+        event = make_event(
+            db_session, organizer, starts_at=datetime.now(UTC) + timedelta(minutes=30)
+        )
+        seat = make_seat(db_session, event, status=SeatStatus.SOLD)
+        ticket = make_ticket(
+            db_session, event, seat, customer, TicketStatus.PAID,
+            paid_at=datetime.now(UTC),
+        )
+
+        response = client.post(
+            f"/tickets/{ticket.id}/cancel", headers=auth_headers(customer)
+        )
+
+        assert response.status_code == 422
+        assert "2 hours" in response.json()["detail"]
+
+    def test_cancel_used_ticket_returns_422(
+        self, client: TestClient, db_session: Session
+    ):
+        organizer = make_user(db_session, Role.ORGANIZER)
+        customer = make_user(db_session, Role.CUSTOMER)
+        event = make_event(
+            db_session, organizer, starts_at=datetime.now(UTC) + timedelta(hours=5)
+        )
+        seat = make_seat(db_session, event, status=SeatStatus.SOLD)
+        ticket = make_ticket(
+            db_session, event, seat, customer, TicketStatus.USED,
+            paid_at=datetime.now(UTC), used_at=datetime.now(UTC),
+        )
+
+        response = client.post(
+            f"/tickets/{ticket.id}/cancel", headers=auth_headers(customer)
+        )
+
+        assert response.status_code == 422
+
+    def test_cancel_transferred_ticket_returns_422(
+        self, client: TestClient, db_session: Session
+    ):
+        organizer = make_user(db_session, Role.ORGANIZER)
+        customer = make_user(db_session, Role.CUSTOMER)
+        event = make_event(
+            db_session, organizer, starts_at=datetime.now(UTC) + timedelta(hours=5)
+        )
+        seat = make_seat(db_session, event, status=SeatStatus.SOLD)
+        ticket = make_ticket(
+            db_session, event, seat, customer, TicketStatus.TRANSFERRED,
+            paid_at=datetime.now(UTC),
+        )
+
+        response = client.post(
+            f"/tickets/{ticket.id}/cancel", headers=auth_headers(customer)
+        )
+
+        assert response.status_code == 422

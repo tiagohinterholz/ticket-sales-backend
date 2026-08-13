@@ -10,6 +10,11 @@ from app.models.ticket import Ticket, TicketStatus
 from app.models.user import Role, User
 from app.schemas.ticket import TicketDetailRead, TicketRead
 from app.services import ticketing
+from app.services.booking import (
+    CancelWindowError,
+    InvalidTicketStateError,
+    cancel_ticket,
+)
 
 router = APIRouter(prefix="/tickets", tags=["tickets"])
 
@@ -61,3 +66,23 @@ def get_ticket_detail(
         expires_at=ticket.expires_at,
         qr_token=qr_token,
     )
+
+
+@router.post("/{ticket_id}/cancel", response_model=TicketRead)
+def cancel_ticket_endpoint(
+    ticket_id: UUID,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_role(Role.CUSTOMER)),
+) -> Ticket:
+    ticket = _get_owned_ticket(db, ticket_id, current_user)
+    try:
+        return cancel_ticket(db, ticket, current_user)
+    except CancelWindowError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Cancellation is only allowed until 2 hours before the event",
+        ) from exc
+    except InvalidTicketStateError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc)
+        ) from exc
