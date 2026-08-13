@@ -1,3 +1,4 @@
+import secrets
 import uuid
 from datetime import UTC, datetime, timedelta
 
@@ -7,6 +8,7 @@ from app.core.security import create_access_token, hash_password
 from app.models.event import Event, EventStatus
 from app.models.seat import Seat, SeatStatus
 from app.models.ticket import Ticket, TicketStatus
+from app.models.transfer_invite import TransferInvite, TransferInviteStatus
 from app.models.user import Role, User
 
 
@@ -94,3 +96,27 @@ def make_ticket(
     db_session.commit()
     db_session.refresh(ticket)
     return ticket
+
+
+def make_transfer_invite(
+    db_session: Session,
+    ticket: Ticket,
+    from_user: User,
+    to_email: str | None = None,
+    **overrides,
+) -> TransferInvite:
+    defaults = {
+        "ticket_id": ticket.id,
+        "from_user_id": from_user.id,
+        "to_email": to_email or f"invitee-{uuid.uuid4()}@example.com",
+        "to_user_id": None,
+        "token": secrets.token_urlsafe(16),
+        "status": TransferInviteStatus.PENDING,
+        "expires_at": datetime.now(UTC) + timedelta(hours=24),
+    }
+    defaults.update(overrides)
+    invite = TransferInvite(**defaults)
+    db_session.add(invite)
+    db_session.commit()
+    db_session.refresh(invite)
+    return invite
