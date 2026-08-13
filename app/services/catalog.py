@@ -28,11 +28,6 @@ class MovieResult:
 
 
 def search_movies(query: str) -> list[MovieResult]:
-    """Search TMDb for movies matching `query`.
-
-    Raises CatalogUnavailableError on timeout, connection failure, or any
-    HTTP error status returned by TMDb.
-    """
     try:
         response = httpx.get(
             f"{TMDB_BASE_URL}/search/movie",
