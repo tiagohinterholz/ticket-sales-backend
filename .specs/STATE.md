@@ -58,6 +58,22 @@
 - **Date**: 2026-08-13
 - **Status**: active
 
+### AD-008
+- **Decision**: `CORSMiddleware` adicionado em `app/main.py` (`allow_origins=["*"]`) para permitir que o repo web (`ticket-sales-platform-web`, origem diferente em dev — `localhost:5173` vs API em `localhost:8000`) consiga chamar a API pelo navegador.
+- **Reason**: Descoberto durante T26 (front-end) — sem isso, o preflight `OPTIONS` do browser falha antes de qualquer request chegar no servidor; nenhuma tela do front consegue falar com a API. Bloqueava literalmente o "Done when" de T26 (testar login/registro no navegador).
+- **Trade-off**: `allow_origins=["*"]` é permissivo (qualquer origem pode chamar a API). Aceitável para o escopo do desafio (sem cookies de sessão — auth é via `Authorization: Bearer`, não cookie, então CSRF não se aplica da forma clássica); se fosse produção real, restringiria a origens conhecidas (domínio da Vercel do deploy, `localhost` em dev).
+- **Scope**: `app/main.py`, repo da API — vale pra todo front-end que for consumir essa API.
+- **Date**: 2026-08-13
+- **Status**: active
+
+### AD-009
+- **Decision**: No repo web, toda chamada `useQuery`/`useMutation` do React Query vive em um hook dedicado sob `src/api/hooks/` (`useEvents`, `useEvent`, `useHoldSeat`, `useTicket`, `usePayTicket`, ...) — nunca inline dentro de um componente de página/feature. Efeitos colaterais genéricos de cache (invalidação de query relacionada) ficam no hook; efeitos específicos da tela (navegação, mensagem de erro local) são passados como callback no site de chamada (`.mutate(vars, {onSuccess, onError})`), já que React Query dispara tanto o callback do hook quanto o da chamada.
+- **Reason**: `CheckoutPage` e `TicketPlaceholderPage` chegaram com o mesmo `useQuery(["ticket", id], () => getTicket(id))` copiado quase literalmente — mesmo padrão de duplicação já visto (e corrigido) nos testes do backend (AD-007). Apontado pelo usuário.
+- **Trade-off**: Mais um nível de indireção (hook fino em vez de chamada direta) — aceitável, é o mesmo trade-off já aceito do lado do backend.
+- **Scope**: Todo componente de página/feature do repo web, em qualquer task futura (T30+). Antes de escrever um novo `useQuery`/`useMutation`, checar se já existe um hook equivalente em `src/api/hooks/`; se não, criar lá, não inline.
+- **Date**: 2026-08-13
+- **Status**: active
+
 ## Handoff
 
 - **Feature**: ticket-platform (`.specs/features/ticket-platform/`, vive no repo `ticket-sales-platform-api` — ver AD-004)
