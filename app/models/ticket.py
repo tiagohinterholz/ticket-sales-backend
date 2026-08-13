@@ -28,9 +28,6 @@ class Ticket(Base, UUIDPKMixin, TimestampMixin):
         Enum(TicketStatus, name="ticket_status"), nullable=False
     )
     qr_secret: Mapped[str] = mapped_column(String, nullable=False)
-
-    # Domain-state timestamps — each marks a distinct business transition,
-    # kept explicit rather than folded into the generic TimestampMixin fields.
     held_at: Mapped[datetime] = mapped_column(nullable=False)
     expires_at: Mapped[datetime | None] = mapped_column(nullable=True)
     paid_at: Mapped[datetime | None] = mapped_column(nullable=True)

@@ -32,6 +32,4 @@ class TransferInvite(Base, UUIDPKMixin, TimestampMixin):
     status: Mapped[TransferInviteStatus] = mapped_column(
         Enum(TransferInviteStatus, name="transfer_invite_status"), nullable=False
     )
-    # Domain-state timestamp — computed by the service as created_at + 24h
-    # (TRANSFER_EXPIRY_HOURS), not a mixin/server-generated value.
     expires_at: Mapped[datetime] = mapped_column(nullable=False)
