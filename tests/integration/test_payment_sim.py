@@ -7,7 +7,7 @@ from app.models.payment_attempt import PaymentAttempt, PaymentResult
 from app.models.seat import SeatStatus
 from app.models.ticket import TicketStatus
 from app.models.user import Role
-from app.services import payment_sim
+from app.services import payment_sim, ticketing
 from tests.integration.factories import make_event, make_seat, make_ticket, make_user
 
 
@@ -50,6 +50,7 @@ class TestAttemptPayment:
             customer,
             expires_at=datetime.now(UTC) + timedelta(minutes=5),
         )
+        held_qr_secret = ticket.qr_secret
 
         outcome = payment_sim.attempt_payment(db_session, ticket.id, "4111111111111234")
 
@@ -57,6 +58,8 @@ class TestAttemptPayment:
         assert outcome.ticket.paid_at is not None
         assert outcome.payment_attempt.result == PaymentResult.APPROVED
         assert outcome.payment_attempt.card_last4 == "1234"
+        assert outcome.ticket.qr_secret != held_qr_secret
+        assert ticketing.render_token(outcome.ticket).count(".") == 2
 
     def test_expired_hold_still_flagged_held_raises_hold_expired_error(
         self, db_session: Session

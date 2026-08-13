@@ -39,6 +39,34 @@ class TestIssue:
         assert ticketing.validate(db_session, token, event.id) == ticketing.GateResult.VALID
 
 
+class TestRenderToken:
+    def test_render_token_does_not_change_qr_secret_and_is_stable_across_calls(
+        self, db_session: Session
+    ):
+        organizer = make_user(db_session, Role.ORGANIZER)
+        customer = make_user(db_session, Role.CUSTOMER)
+        event = make_event(db_session, organizer)
+        seat = make_seat(db_session, event)
+        ticket = make_ticket(
+            db_session,
+            event,
+            seat,
+            customer,
+            status=TicketStatus.PAID,
+            paid_at=datetime.now(UTC),
+        )
+        secret_before = ticket.qr_secret
+
+        first_token = ticketing.render_token(ticket)
+        second_token = ticketing.render_token(ticket)
+
+        assert ticket.qr_secret == secret_before
+        assert first_token == second_token
+        assert ticketing.validate(db_session, first_token, event.id) == (
+            ticketing.GateResult.VALID
+        )
+
+
 class TestValidate:
     def test_validate_tampered_signature_returns_invalid(self, db_session: Session):
         organizer = make_user(db_session, Role.ORGANIZER)

@@ -6,6 +6,7 @@ from sqlalchemy.orm import Session
 
 from app.models.payment_attempt import PaymentAttempt, PaymentResult
 from app.models.ticket import Ticket, TicketStatus
+from app.services import ticketing
 
 
 class HoldExpiredError(Exception):
@@ -49,6 +50,7 @@ def attempt_payment(db: Session, ticket_id: UUID, card_number: str) -> PaymentOu
     if not declined:
         ticket.status = TicketStatus.PAID
         ticket.paid_at = now
+        ticketing.issue(ticket)
 
     db.commit()
     db.refresh(ticket)

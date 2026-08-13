@@ -26,12 +26,15 @@ def _sign(ticket_id: str, qr_secret: str) -> str:
     ).hexdigest()
 
 
-def issue(ticket: Ticket) -> str:
-    qr_secret = secrets.token_hex(32)
-    ticket.qr_secret = qr_secret
+def render_token(ticket: Ticket) -> str:
     ticket_id = str(ticket.id)
-    signature = _sign(ticket_id, qr_secret)
-    return f"{ticket_id}.{qr_secret}.{signature}"
+    signature = _sign(ticket_id, ticket.qr_secret)
+    return f"{ticket_id}.{ticket.qr_secret}.{signature}"
+
+
+def issue(ticket: Ticket) -> str:
+    ticket.qr_secret = secrets.token_hex(32)
+    return render_token(ticket)
 
 
 def validate(db: Session, raw_token: str, gate_event_id: UUID) -> GateResult:

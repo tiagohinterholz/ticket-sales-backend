@@ -102,6 +102,27 @@ class TestGetTicketDetail:
             ticketing.GateResult.VALID
         )
 
+    def test_detail_viewed_twice_returns_the_same_qr_token(
+        self, client: TestClient, db_session: Session
+    ):
+        organizer = make_user(db_session, Role.ORGANIZER)
+        customer = make_user(db_session, Role.CUSTOMER)
+        event = make_event(db_session, organizer)
+        seat = make_seat(db_session, event, status=SeatStatus.SOLD)
+        ticket = make_ticket(
+            db_session, event, seat, customer, TicketStatus.PAID,
+            paid_at=datetime.now(UTC),
+        )
+
+        first_response = client.get(
+            f"/tickets/{ticket.id}", headers=auth_headers(customer)
+        )
+        second_response = client.get(
+            f"/tickets/{ticket.id}", headers=auth_headers(customer)
+        )
+
+        assert first_response.json()["qr_token"] == second_response.json()["qr_token"]
+
     def test_detail_of_used_ticket_returns_null_qr_token(
         self, client: TestClient, db_session: Session
     ):

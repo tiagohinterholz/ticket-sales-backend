@@ -50,9 +50,7 @@ def get_ticket_detail(
 
     qr_token = None
     if ticket.status == TicketStatus.PAID:
-        qr_token = ticketing.issue(ticket)
-        db.commit()
-        db.refresh(ticket)
+        qr_token = ticketing.render_token(ticket)
 
     return TicketDetailRead(
         id=ticket.id,
