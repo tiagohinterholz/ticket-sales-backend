@@ -25,7 +25,8 @@ def search_movies(query: str) -> list[MovieResult]:
     try:
         response = httpx.get(
             f"{TMDB_BASE_URL}/search/movie",
-            params={"api_key": settings.TMDB_API_KEY, "query": query},
+            params={"query": query},
+            headers={"Authorization": f"Bearer {settings.TMDB_API_KEY}"},
             timeout=REQUEST_TIMEOUT_SECONDS,
         )
         response.raise_for_status()

@@ -1,11 +1,12 @@
 import httpx
 import pytest
 
+from app.core.config import settings
 from app.services.catalog import CatalogUnavailableError, MovieResult, search_movies
 
 
 def _fake_get(response: httpx.Response | None = None, exc: Exception | None = None):
-    def fake_get(url, params=None, timeout=None):
+    def fake_get(url, params=None, headers=None, timeout=None):
         if exc is not None:
             raise exc
         return response
@@ -91,3 +92,22 @@ class TestSearchMovies:
 
         with pytest.raises(CatalogUnavailableError):
             search_movies("anything")
+
+    def test_search_movies_sends_api_key_as_bearer_authorization_header(
+        self, monkeypatch
+    ):
+        captured: dict = {}
+
+        def fake_get(url, params=None, headers=None, timeout=None):
+            captured["headers"] = headers
+            captured["params"] = params
+            return _tmdb_response({"results": []})
+
+        monkeypatch.setattr("app.services.catalog.httpx.get", fake_get)
+
+        search_movies("matrix")
+
+        assert captured["headers"] == {
+            "Authorization": f"Bearer {settings.TMDB_API_KEY}"
+        }
+        assert "api_key" not in captured["params"]
