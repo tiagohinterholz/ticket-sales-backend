@@ -77,10 +77,10 @@
 ## Handoff
 
 - **Feature**: ticket-platform (`.specs/features/ticket-platform/`, vive no repo `ticket-sales-platform-api` — ver AD-004)
-- **Phase / Task**: Tasks aprovadas (T01–T39, 5 fases, execução via 1 sub-agente por fase — usuário confirmou). Dois repos git já inicializados e com primeiro commit. Próximo: disparar o worker da Fase 1 (T01 scaffold+git da API já parcialmente feito manualmente — falta o conteúdo real de T01/T02: pyproject/uv, FastAPI mínimo, Vite scaffold, Dockerfiles).
-- **Completed**: spec.md, context.md, design.md, tasks.md; `git init` dos 2 repos (`backend/` = `ticket-sales-platform-api`, `frontend/` = `ticket-sales-platform-web`); primeiro commit em cada um (`.specs/`+`.gitignore` na API, `.gitignore` no web)
+- **Phase / Task**: Todas as 39 tasks (T01–T39) commitadas nos dois repos. Verifier de fim-de-feature rodou (`validation.md`), achou 2 gaps Major (GATE-02: `used_at` ausente na resposta de "já utilizado"; CATALOG-01: organizador não escolhia o filme entre resultados da busca) + 2 menores (edge case de edição de evento não documentado; teste de JWT com tamper flaky) — todos corrigidos e revalidados manualmente (testes + chamadas reais contra TMDb/Postgres) após o relatório. `validation.md` reflete o veredito da 1ª passada (FAIL com os gaps); os commits posteriores a ele contêm as correções.
+- **Completed**: spec.md, context.md, design.md, tasks.md, STATE.md (AD-001..AD-009+), os dois repos com backend (T01-T25) + frontend (T26-T35) + seed/compose/READMEs (T36-T39) + fixes pós-Verifier, todos commitados. Suíte do backend: 133 testes passando.
 - **In-progress**: nenhum arquivo em edição
-- **Next step**: disparar sub-agente da Fase 1 (T01: scaffold FastAPI/uv/Dockerfile no repo API; T02: scaffold Vite/React/Router/React Query/Dockerfile no repo web; T03/T04 na sequência)
+- **Next step**: opcional — deploy (Vercel + Render/Railway), não feito nesta rodada (documentado como limitação conhecida nos READMEs); ou revalidação final do Verifier sobre os fixes, se quiser fechar o ciclo fix→reverify formalmente antes de considerar a feature 100% encerrada.
 - **Blockers**: none
-- **Uncommitted files**: none (working tree limpa em ambos os repos após o commit inicial)
+- **Uncommitted files**: none (working tree limpa em ambos os repos)
 - **Branch**: `main` em ambos os repos
