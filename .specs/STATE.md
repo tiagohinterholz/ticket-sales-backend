@@ -84,6 +84,14 @@
 - **Date**: 2026-08-14
 - **Status**: active
 
+### AD-011
+- **Decision**: No repo web, todo teste de componente monta `QueryClientProvider` + `MemoryRouter`/`Routes` (e, quando o componente depende de `useAuth()`, `AuthProvider`) através de um único helper compartilhado, `src/test/renderWithProviders.tsx` (`renderWithProviders(ui, { route, path, extraRoutes?, withAuth? })`) — nunca recriando `new QueryClient({...})` + `QueryClientProvider` + `MemoryRouter` inline em cada arquivo de teste.
+- **Reason**: `GatePage.test.tsx`, `TicketDetailPage.test.tsx`, `CheckoutPage.test.tsx` e `EventsListPage.test.tsx` chegaram cada um com sua própria função `renderX()` duplicando o mesmo setup de providers — mesmo padrão de duplicação já corrigido antes no projeto (AD-007 no backend, AD-009 no front) — apontado pelo usuário ao ler o código.
+- **Trade-off**: Um nível de indireção a mais (helper genérico com `extraRoutes`/`withAuth` opcionais) em vez de JSX inline explícito por arquivo — aceitável, mesmo trade-off já aceito nos padrões anteriores de extração de duplicação.
+- **Scope**: Todo teste de componente do repo web (`ticket-sales-platform-web`), em qualquer rodada futura de cobertura. Antes de escrever um novo `renderX()` local num arquivo de teste, usar `renderWithProviders` (ou `renderWithAuth`-style via `withAuth: true`), não recriar o setup.
+- **Date**: 2026-08-14
+- **Status**: active
+
 ## Handoff
 
 - **Feature**: ticket-platform (`.specs/features/ticket-platform/`, vive no repo `ticket-sales-platform-api` — ver AD-004)

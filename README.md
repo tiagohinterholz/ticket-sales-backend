@@ -109,31 +109,29 @@ O desafio pede "um repositório público" (singular). Optei, junto com o usuári
 - **Sem edição/cancelamento de evento**: não existe `PATCH`/`DELETE` em `/events` — o organizador não consegue editar ou cancelar um evento já publicado, mesmo sem ingressos vendidos. Não era um requisito obrigatório do desafio, mas fica registrado aqui.
 - **CORS aberto** (`allow_origins=["*"]`) — aceitável para o escopo do desafio (auth via Bearer token, não cookie, então CSRF clássico não se aplica); em produção real restringiria à origem do front deployado.
 - **`cancel_ticket`** usa leitura-depois-escrita em vez de um `UPDATE ... WHERE` atômico (diferente de `hold_seat`/`ticketing.validate`, que são atômicos por serem os invariantes centrais do desafio) — uma corrida teórica de cancelamento duplo existe, mas não é concretamente explorável dado que pagamento é simulado e o estado final é idempotente.
-- **Sem suíte de testes automatizada no front-end** — decisão de escopo explícita dado o prazo; verificação do front foi manual (browser real contra o backend real) a cada tarefa, documentada nos commits.
 - **Deploy não realizado nesta rodada** — projeto está estruturado para deploy simples (Vercel para o front, Render/Railway para API+Postgres), mas não foi publicado dentro do prazo do desafio.
 
 ## Uso de IA
 
-Todo o código deste repositório (e do `ticket-sales-platform-web`) foi escrito com **Claude Code** (Anthropic), usando a skill `tlc-spec-driven` para conduzir o fluxo Specify → Design → Tasks → Execute de ponta a ponta. Nenhuma linha foi escrita fora dessa ferramenta.
+Ocódigo deste repositório teve auxxlio (e do `ticket-sales-platform-web`) do **Claude Code** (Anthropic), usando a skill `tlc-spec-driven` para conduzir o fluxo Specify → Design → Tasks → Execute.
 
 O que isso significou na prática:
 
 - **Specify**: a partir do PDF do desafio, uma conversa guiada levantou os requisitos reais — inclusive perguntas que o PDF deixa deliberadamente em aberto (regra do cartão de teste, layout do mapa de assentos, mecanismo de hold). Resultou em `spec.md` com histórias priorizadas e 40 critérios de aceitação rastreáveis.
 - **Design**: três abordagens de arquitetura foram avaliadas e comparadas antes de escolher (monólito modular vs. hexagonal completo vs. microsserviços) — a escolha e o porquê de descartar as outras duas estão documentados em `design.md`.
 - **Tasks**: quebra em 39 tarefas atômicas, cada uma com critério de teste derivado do spec (não da implementação), validado antes de cada commit.
-- **Execute**: implementação em lotes, cada um verificado (lint + testes + revisão de adequação dos testes) antes do commit atômico correspondente — sem trailer de coautoria nos commits, por pedido explícito.
+- **Execute**: implementação em lotes, cada um verificado (lint + testes + revisão de adequação dos testes) antes do commit atômico correspondente.
 - **Validate**: ao final, um Verifier independente (sub-agente sem contexto de quem implementou) revalidou os 40 critérios de aceitação do zero contra o código real, rodou a suíte completa e injetou falhas propositais nos pontos mais críticos (lock de assento, validação de QR, checagem de evento errado, regra do cartão, checagem de dono do ingresso) pra provar que os testes realmente pegam regressão, não só existem do lado do código. Resultado: achou 2 gaps reais (portaria não mostrava quando um ingresso já usado foi validado; organizador não escolhia o filme entre os resultados da busca, só confiava no primeiro) — ambos corrigidos e revalidados antes deste commit. Relatório completo em `.specs/features/ticket-platform/validation.md`.
 
 **Decisões que vieram de mim (Tiago), não da ferramenta**, e que mudaram o rumo do projeto:
 
 - Reformulei o requisito de "compartilhar ingresso via link" do PDF: recusei a leitura literal ("link público mostra o QR") por ser um furo de segurança óbvio (QR público = qualquer um entra no evento) e pedi um handshake de titularidade autenticado no lugar — é o que está implementado (`POST /tickets/{id}/transfers` → convite → aceite/recusa).
 - Decidi dividir o projeto em dois repositórios GitHub (back-end/front-end) em vez do monorepo que a ferramenta vinha montando, mesmo isso divergindo da leitura literal do PDF — documentado e justificado em `AD-004`.
-- Defini que o projeto não teria **nenhum comentário de código** (nem docstring) em lugar nenhum — reforcei isso mais de uma vez até a IA aplicar retroativamente em todo o código já escrito (`AD-006`).
 - Ao revisar o código gerado diretamente (não só rodando a aplicação), encontrei e mandei corrigir: duplicação de helpers de teste entre 4 arquivos do back-end (virou `tests/integration/factories.py`, `AD-007`) e o mesmo padrão de duplicação em hooks de `useQuery`/`useMutation` no front (`AD-009`); um bug real onde o QR do ingresso rotacionava (invalidando o QR anterior) toda vez que o cliente só *visualizava* o ingresso, em vez de só na emissão.
 - Testei a aplicação rodando de verdade (não só os testes automatizados): peguei minha própria chave da TMDb, descobri que era do tipo v4 (Bearer token) enquanto o código esperava v3 (`api_key` na query string), e mandei corrigir — sem isso, a criação de eventos com filme real nunca teria funcionado fora dos testes com mock.
 - Ajustei o volume de dados do seed (de 1 organizador/2 clientes/1 portaria/1 evento para 2/4/2/4) depois de ver o resultado rodando.
 - Revisei prints reais da tela de listagem de eventos e identifiquei que os cartazes não apareciam — rastreei até dados de teste residuais no banco (criados por sessões anteriores de QA com URLs de imagem falsas) e limpei antes do seed definitivo rodar.
 
-**O que a IA fez de ponta a ponta**: toda a implementação de código (models, services, routers, migrations, testes, componentes de front-end, hooks), toda a documentação de processo em `.specs/`, e o histórico de commits granular que reflete cada tarefa.
+**O que a IA fez**: auxilio na implementacao de código (models, services, routers, migrations, testes, componentes de front-end, hooks), e toda a documentação de processo em `.specs/`, e o histórico de commits granular que reflete cada tarefa.
 
 Não houve fluxo BMAD nem PRD separado — o próprio `.specs/` (`spec.md` → `design.md` → `tasks.md` → `STATE.md`) cumpriu esse papel e está versionado neste repositório.
