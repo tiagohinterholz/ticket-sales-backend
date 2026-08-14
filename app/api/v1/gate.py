@@ -33,6 +33,14 @@ def validate_ticket_endpoint(
 ) -> GateValidateResponse:
     result = validate(db, payload.raw_code, payload.event_id)
 
+    if result == GateResult.ALREADY_USED:
+        ticket_id = _parse_ticket_id(payload.raw_code)
+        ticket = db.get(Ticket, ticket_id) if ticket_id is not None else None
+        return GateValidateResponse(
+            result=result,
+            used_at=ticket.used_at if ticket is not None else None,
+        )
+
     if result != GateResult.VALID:
         return GateValidateResponse(result=result)
 
@@ -47,4 +55,5 @@ def validate_ticket_endpoint(
         seat=SeatRead.model_validate(seat) if seat is not None else None,
         customer_name=customer.name if customer is not None else None,
         customer_email=customer.email if customer is not None else None,
+        used_at=ticket.used_at if ticket is not None else None,
     )

@@ -47,7 +47,7 @@ class TestValidateEndpoint:
         assert body["customer_name"] == customer.name
         assert body["customer_email"] == customer.email
 
-    def test_validate_already_used_ticket_returns_already_used(
+    def test_validate_already_used_ticket_returns_already_used_with_used_at(
         self, client: TestClient, db_session: Session
     ):
         organizer = make_user(db_session, Role.ORGANIZER)
@@ -55,10 +55,11 @@ class TestValidateEndpoint:
         customer = make_user(db_session, Role.CUSTOMER)
         event = make_event(db_session, organizer)
         seat = make_seat(db_session, event, status=SeatStatus.SOLD)
+        used_at = datetime.now(UTC) - timedelta(minutes=5)
         ticket = make_ticket(
             db_session, event, seat, customer, TicketStatus.USED,
             paid_at=datetime.now(UTC) - timedelta(minutes=10),
-            used_at=datetime.now(UTC) - timedelta(minutes=5),
+            used_at=used_at,
         )
         token = ticketing.issue(ticket)
         db_session.commit()
@@ -70,7 +71,10 @@ class TestValidateEndpoint:
         )
 
         assert response.status_code == 200
-        assert response.json()["result"] == "ALREADY_USED"
+        body = response.json()
+        assert body["result"] == "ALREADY_USED"
+        assert body["used_at"] is not None
+        assert datetime.fromisoformat(body["used_at"]).replace(tzinfo=UTC) == used_at
 
     def test_validate_wrong_event_returns_wrong_event(
         self, client: TestClient, db_session: Session
@@ -121,10 +125,11 @@ class TestValidateEndpoint:
         customer = make_user(db_session, Role.CUSTOMER)
         event = make_event(db_session, organizer)
         seat = make_seat(db_session, event, status=SeatStatus.SOLD)
+        used_at = datetime.now(UTC) - timedelta(minutes=5)
         ticket = make_ticket(
             db_session, event, seat, customer, TicketStatus.USED,
             paid_at=datetime.now(UTC) - timedelta(minutes=10),
-            used_at=datetime.now(UTC) - timedelta(minutes=5),
+            used_at=used_at,
         )
         token = ticketing.issue(ticket)
         db_session.commit()
@@ -141,13 +146,14 @@ class TestValidateEndpoint:
         )
 
         assert via_token.status_code == via_manual_code.status_code == 200
-        assert via_token.json() == via_manual_code.json() == {
-            "result": "ALREADY_USED",
-            "ticket_id": None,
-            "seat": None,
-            "customer_name": None,
-            "customer_email": None,
-        }
+        token_body = via_token.json()
+        assert token_body == via_manual_code.json()
+        assert token_body["result"] == "ALREADY_USED"
+        assert token_body["ticket_id"] is None
+        assert token_body["seat"] is None
+        assert token_body["customer_name"] is None
+        assert token_body["customer_email"] is None
+        assert datetime.fromisoformat(token_body["used_at"]).replace(tzinfo=UTC) == used_at
 
     def test_validate_by_customer_returns_403(
         self, client: TestClient, db_session: Session

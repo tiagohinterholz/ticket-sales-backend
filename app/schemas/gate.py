@@ -1,3 +1,4 @@
+from datetime import datetime
 from uuid import UUID
 
 from pydantic import BaseModel, model_validator
@@ -28,3 +29,4 @@ class GateValidateResponse(BaseModel):
     seat: SeatRead | None = None
     customer_name: str | None = None
     customer_email: str | None = None
+    used_at: datetime | None = None
