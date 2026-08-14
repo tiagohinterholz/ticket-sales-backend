@@ -113,7 +113,7 @@ O desafio pede "um repositório público" (singular). Optei, junto com o usuári
 
 ## Uso de IA
 
-Ocódigo deste repositório teve auxxlio (e do `ticket-sales-platform-web`) do **Claude Code** (Anthropic), usando a skill `tlc-spec-driven` para conduzir o fluxo Specify → Design → Tasks → Execute.
+O código deste repositório (e do `ticket-sales-platform-web`) teve auxílio do **Claude Code** (Anthropic), usando a skill `tlc-spec-driven` para conduzir o fluxo Specify → Design → Tasks → Execute.
 
 O que isso significou na prática:
 
