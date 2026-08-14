@@ -10,6 +10,7 @@ from app.db.session import get_db
 from app.models.event import Event, EventStatus
 from app.models.seat import Seat, SeatStatus
 from app.models.user import Role, User
+from app.schemas.catalog import MovieSearchResult
 from app.schemas.event import (
     EventCreate,
     EventDetailRead,
@@ -31,6 +32,30 @@ def _row_label(row_index: int) -> str:
     return label
 
 
+@router.get("/catalog", response_model=list[MovieSearchResult])
+def search_catalog(
+    query: str,
+    current_user: User = Depends(require_role(Role.ORGANIZER)),
+) -> list[MovieSearchResult]:
+    try:
+        movies = search_movies(query)
+    except CatalogUnavailableError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail="Movie catalog is unavailable, try again later",
+        ) from exc
+
+    return [
+        MovieSearchResult(
+            tmdb_id=movie.tmdb_id,
+            title=movie.title,
+            poster_url=movie.poster_url,
+            release_date=movie.release_date,
+        )
+        for movie in movies
+    ]
+
+
 @router.post("", response_model=EventRead, status_code=status.HTTP_201_CREATED)
 def create_event(
     payload: EventCreate,
@@ -50,7 +75,18 @@ def create_event(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail="No movie found for the given query",
         )
-    movie = movies[0]
+
+    if payload.tmdb_movie_id is not None:
+        movie = next(
+            (m for m in movies if m.tmdb_id == payload.tmdb_movie_id), None
+        )
+        if movie is None:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail="Selected movie is not among the current search results, search again",
+            )
+    else:
+        movie = movies[0]
 
     event = Event(
         organizer_id=current_user.id,

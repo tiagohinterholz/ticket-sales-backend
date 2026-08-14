@@ -51,6 +51,70 @@ def _mock_search_movies_unavailable(monkeypatch):
     monkeypatch.setattr("app.api.v1.events.search_movies", fake_search_movies)
 
 
+class TestSearchCatalog:
+    def test_search_returns_tmdb_results_for_organizer(
+        self, client: TestClient, db_session: Session, monkeypatch
+    ):
+        organizer = _make_user(db_session, Role.ORGANIZER)
+        _mock_search_movies(
+            monkeypatch,
+            [
+                _movie(title="The Matrix", tmdb_id=603),
+                _movie(title="The Matrix Reloaded", tmdb_id=604),
+            ],
+        )
+
+        response = client.get(
+            "/events/catalog",
+            params={"query": "matrix"},
+            headers=_auth_headers(organizer),
+        )
+
+        assert response.status_code == 200
+        body = response.json()
+        assert len(body) == 2
+        assert body[0]["tmdb_id"] == 603
+        assert body[0]["title"] == "The Matrix"
+        assert body[1]["tmdb_id"] == 604
+
+    def test_search_when_tmdb_unavailable_returns_502(
+        self, client: TestClient, db_session: Session, monkeypatch
+    ):
+        organizer = _make_user(db_session, Role.ORGANIZER)
+        _mock_search_movies_unavailable(monkeypatch)
+
+        response = client.get(
+            "/events/catalog",
+            params={"query": "matrix"},
+            headers=_auth_headers(organizer),
+        )
+
+        assert response.status_code == 502
+
+    def test_search_by_customer_returns_403(
+        self, client: TestClient, db_session: Session, monkeypatch
+    ):
+        customer = _make_user(db_session, Role.CUSTOMER)
+        _mock_search_movies(monkeypatch)
+
+        response = client.get(
+            "/events/catalog",
+            params={"query": "matrix"},
+            headers=_auth_headers(customer),
+        )
+
+        assert response.status_code == 403
+
+    def test_search_without_auth_returns_401(
+        self, client: TestClient, monkeypatch
+    ):
+        _mock_search_movies(monkeypatch)
+
+        response = client.get("/events/catalog", params={"query": "matrix"})
+
+        assert response.status_code == 401
+
+
 class TestCreateEvent:
     def test_create_event_with_valid_movie_creates_event_and_seat_grid(
         self, client: TestClient, db_session: Session, monkeypatch
@@ -166,6 +230,45 @@ class TestCreateEvent:
         response = client.post("/events", json=_event_payload())
 
         assert response.status_code == 401
+
+    def test_create_event_with_tmdb_movie_id_selects_that_movie_not_the_first(
+        self, client: TestClient, db_session: Session, monkeypatch
+    ):
+        organizer = _make_user(db_session, Role.ORGANIZER)
+        _mock_search_movies(
+            monkeypatch,
+            [
+                _movie(title="The Matrix", tmdb_id=603),
+                _movie(title="The Matrix Reloaded", tmdb_id=604),
+            ],
+        )
+
+        response = client.post(
+            "/events",
+            json=_event_payload(tmdb_movie_id=604),
+            headers=_auth_headers(organizer),
+        )
+
+        assert response.status_code == 201
+        body = response.json()
+        assert body["tmdb_movie_id"] == 604
+        assert body["title"] == "The Matrix Reloaded"
+
+    def test_create_event_with_tmdb_movie_id_not_in_results_returns_422(
+        self, client: TestClient, db_session: Session, monkeypatch
+    ):
+        organizer = _make_user(db_session, Role.ORGANIZER)
+        _mock_search_movies(
+            monkeypatch, [_movie(title="The Matrix", tmdb_id=603)]
+        )
+
+        response = client.post(
+            "/events",
+            json=_event_payload(tmdb_movie_id=999999),
+            headers=_auth_headers(organizer),
+        )
+
+        assert response.status_code == 422
 
 
 class TestListEvents:

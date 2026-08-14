@@ -10,6 +10,7 @@ from app.schemas.base import BaseReadSchema
 
 class EventCreate(BaseModel):
     movie_query: str = Field(min_length=1)
+    tmdb_movie_id: int | None = None
     venue: str = Field(min_length=1)
     starts_at: datetime
     rows: int = Field(gt=0)
