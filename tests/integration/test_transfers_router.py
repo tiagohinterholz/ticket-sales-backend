@@ -122,6 +122,134 @@ class TestCreateTransferInvite:
         assert response.status_code == 403
 
 
+class TestListIncomingOutgoingTransferInvites:
+    def test_incoming_shows_pending_invite_addressed_to_my_email(
+        self, client: TestClient, db_session: Session
+    ):
+        organizer = make_user(db_session, Role.ORGANIZER)
+        owner = make_user(db_session, Role.CUSTOMER)
+        recipient = make_user(
+            db_session, Role.CUSTOMER, email="recipient@example.com"
+        )
+        event = make_event(db_session, organizer)
+        seat = make_seat(db_session, event, status=SeatStatus.SOLD)
+        ticket = make_ticket(
+            db_session, event, seat, owner, TicketStatus.PAID,
+            paid_at=datetime.now(UTC),
+        )
+        invite = make_transfer_invite(
+            db_session, ticket, owner, to_email="recipient@example.com"
+        )
+
+        response = client.get(
+            "/transfers/incoming", headers=auth_headers(recipient)
+        )
+
+        assert response.status_code == 200
+        body = response.json()
+        assert len(body) == 1
+        assert body[0]["token"] == invite.token
+        assert body[0]["ticket_id"] == str(ticket.id)
+
+    def test_incoming_does_not_show_invites_addressed_to_someone_else(
+        self, client: TestClient, db_session: Session
+    ):
+        organizer = make_user(db_session, Role.ORGANIZER)
+        owner = make_user(db_session, Role.CUSTOMER)
+        unrelated = make_user(db_session, Role.CUSTOMER)
+        event = make_event(db_session, organizer)
+        seat = make_seat(db_session, event, status=SeatStatus.SOLD)
+        ticket = make_ticket(
+            db_session, event, seat, owner, TicketStatus.PAID,
+            paid_at=datetime.now(UTC),
+        )
+        make_transfer_invite(db_session, ticket, owner, to_email="someone@example.com")
+
+        response = client.get(
+            "/transfers/incoming", headers=auth_headers(unrelated)
+        )
+
+        assert response.status_code == 200
+        assert response.json() == []
+
+    def test_incoming_excludes_non_pending_and_expired_invites(
+        self, client: TestClient, db_session: Session
+    ):
+        organizer = make_user(db_session, Role.ORGANIZER)
+        owner = make_user(db_session, Role.CUSTOMER)
+        recipient = make_user(
+            db_session, Role.CUSTOMER, email="recipient@example.com"
+        )
+        event = make_event(db_session, organizer)
+        declined_seat = make_seat(
+            db_session, event, status=SeatStatus.SOLD, seat_number=1
+        )
+        expired_seat = make_seat(
+            db_session, event, status=SeatStatus.SOLD, seat_number=2
+        )
+        declined_ticket = make_ticket(
+            db_session, event, declined_seat, owner, TicketStatus.PAID,
+            paid_at=datetime.now(UTC),
+        )
+        expired_ticket = make_ticket(
+            db_session, event, expired_seat, owner, TicketStatus.PAID,
+            paid_at=datetime.now(UTC),
+        )
+        make_transfer_invite(
+            db_session, declined_ticket, owner,
+            to_email="recipient@example.com",
+            status=TransferInviteStatus.DECLINED,
+        )
+        make_transfer_invite(
+            db_session, expired_ticket, owner,
+            to_email="recipient@example.com",
+            expires_at=datetime.now(UTC) - timedelta(hours=1),
+        )
+
+        response = client.get(
+            "/transfers/incoming", headers=auth_headers(recipient)
+        )
+
+        assert response.status_code == 200
+        assert response.json() == []
+
+    def test_outgoing_shows_my_pending_invite(
+        self, client: TestClient, db_session: Session
+    ):
+        organizer = make_user(db_session, Role.ORGANIZER)
+        owner = make_user(db_session, Role.CUSTOMER)
+        event = make_event(db_session, organizer)
+        seat = make_seat(db_session, event, status=SeatStatus.SOLD)
+        ticket = make_ticket(
+            db_session, event, seat, owner, TicketStatus.PAID,
+            paid_at=datetime.now(UTC),
+        )
+        invite = make_transfer_invite(db_session, ticket, owner)
+
+        response = client.get("/transfers/outgoing", headers=auth_headers(owner))
+
+        assert response.status_code == 200
+        body = response.json()
+        assert len(body) == 1
+        assert body[0]["token"] == invite.token
+
+    def test_incoming_without_auth_returns_401(self, client: TestClient):
+        response = client.get("/transfers/incoming")
+
+        assert response.status_code == 401
+
+    def test_outgoing_by_gate_staff_returns_403(
+        self, client: TestClient, db_session: Session
+    ):
+        gate_staff = make_user(db_session, Role.GATE_STAFF)
+
+        response = client.get(
+            "/transfers/outgoing", headers=auth_headers(gate_staff)
+        )
+
+        assert response.status_code == 403
+
+
 class TestViewTransferInvite:
     def test_any_authenticated_customer_views_invite_data(
         self, client: TestClient, db_session: Session

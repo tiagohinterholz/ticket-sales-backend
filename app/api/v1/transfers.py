@@ -1,3 +1,4 @@
+from datetime import UTC, datetime
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -7,7 +8,7 @@ from sqlalchemy.orm import Session
 from app.core.security import require_role
 from app.db.session import get_db
 from app.models.ticket import Ticket
-from app.models.transfer_invite import TransferInvite
+from app.models.transfer_invite import TransferInvite, TransferInviteStatus
 from app.models.user import Role, User
 from app.schemas.ticket import TicketRead
 from app.schemas.transfer import TransferInviteCreate, TransferInviteRead
@@ -51,6 +52,38 @@ def create_transfer_invite_endpoint(
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc)
         ) from exc
+
+
+@router.get("/transfers/incoming", response_model=list[TransferInviteRead])
+def list_incoming_transfer_invites_endpoint(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_role(Role.CUSTOMER)),
+) -> list[TransferInvite]:
+    return list(
+        db.execute(
+            select(TransferInvite).where(
+                TransferInvite.to_email == current_user.email,
+                TransferInvite.status == TransferInviteStatus.PENDING,
+                TransferInvite.expires_at > datetime.now(UTC),
+            )
+        ).scalars()
+    )
+
+
+@router.get("/transfers/outgoing", response_model=list[TransferInviteRead])
+def list_outgoing_transfer_invites_endpoint(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_role(Role.CUSTOMER)),
+) -> list[TransferInvite]:
+    return list(
+        db.execute(
+            select(TransferInvite).where(
+                TransferInvite.from_user_id == current_user.id,
+                TransferInvite.status == TransferInviteStatus.PENDING,
+                TransferInvite.expires_at > datetime.now(UTC),
+            )
+        ).scalars()
+    )
 
 
 @router.get("/transfers/{token}", response_model=TransferInviteRead)
