@@ -143,7 +143,8 @@ Um organizador precisa publicar eventos (sessões de cinema, no nosso recorte) a
 
 **Acceptance Criteria**:
 1. WHEN uma pessoa se cadastra publicamente THEN o sistema SHALL criar uma conta com papel `CUSTOMER` (único self-signup disponível).
-2. WHEN um usuário `ORGANIZER` tenta acessar rotas de outro organizador ou de cliente/portaria THEN o sistema SHALL negar com 403.
+2. WHEN um usuário `ORGANIZER` tenta acessar uma rota reservada a `CUSTOMER`/`GATE_STAFF` THEN o sistema SHALL negar com 403.
+2a. WHEN um usuário `ORGANIZER` tenta acessar um recurso (evento, mapa de assentos) que pertence a outro organizador THEN o sistema SHALL negar com 404 — mesma resposta de "não existe", para não confirmar a um usuário não-dono que o recurso existe (mesmo padrão aplicado a `CUSTOMER` sobre ingressos de outro cliente).
 3. WHEN um usuário `GATE_STAFF` tenta acessar dados de pagamento ou criar eventos THEN o sistema SHALL negar com 403.
 4. WHEN o login falha (credenciais inválidas) THEN o sistema SHALL retornar erro genérico, sem indicar se o e-mail existe ou não.
 
