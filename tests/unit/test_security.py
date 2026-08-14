@@ -65,7 +65,9 @@ class TestJWTRoundtrip:
     def test_tampered_token_signature_is_rejected(self):
         user = make_user()
         token = create_access_token(user)
-        tampered = token[:-1] + ("A" if token[-1] != "A" else "B")
+        tamper_index = len(token) - 10
+        flipped_char = "A" if token[tamper_index] != "A" else "B"
+        tampered = token[:tamper_index] + flipped_char + token[tamper_index + 1 :]
 
         with pytest.raises(jwt.PyJWTError):
             decode_access_token(tampered)
