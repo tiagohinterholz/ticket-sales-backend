@@ -1,0 +1,81 @@
+{
+  "schema": 1,
+  "promote_threshold": 2,
+  "window_days": 45,
+  "quarantine_threshold": 2,
+  "next_id": 5,
+  "lessons": [
+    {
+      "id": "L-001",
+      "key": "ac_gap::when an ac requires surfacing a domain timestamp on a non happy path branch e g when something was previously done add that field to the response schema up front a short circuit that returns only the enum result silently drops it and nothing catches the omission until spec re verification",
+      "text": "When an AC requires surfacing a domain timestamp on a non-happy-path branch (e.g. when something was previously done), add that field to the response schema up front — a short-circuit that returns only the enum result silently drops it and nothing catches the omission until spec re-verification.",
+      "signal": "ac_gap",
+      "scope": "api-contracts",
+      "status": "candidate",
+      "features": [
+        "ticket-platform"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "spec.md GATE-02 / app/api/v1/gate.py:36-37 (api-contracts)"
+      ],
+      "created": "2026-08-14T12:39:42Z",
+      "last_seen": "2026-08-14T12:39:42Z"
+    },
+    {
+      "id": "L-002",
+      "key": "ac_gap::when a spec ac says the user selects from a list of external search results do not fold the search into the create submit endpoint and auto pick the first match expose a dedicated search list endpoint so the ui can render a real picker before the create action fires",
+      "text": "When a spec AC says the user selects from a list of external search results, do not fold the search into the create/submit endpoint and auto-pick the first match — expose a dedicated search/list endpoint so the UI can render a real picker before the create action fires.",
+      "signal": "ac_gap",
+      "scope": "api-design",
+      "status": "candidate",
+      "features": [
+        "ticket-platform"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "spec.md CATALOG-01 / app/api/v1/events.py:41-53 (api-design)"
+      ],
+      "created": "2026-08-14T12:39:42Z",
+      "last_seen": "2026-08-14T12:39:42Z"
+    },
+    {
+      "id": "L-003",
+      "key": "spec_precision_gap::when a spec ac names a specific http status code for an authorization failure decide explicitly between role based denial 403 and ownership existence hiding denial 404 per case and reconcile the spec s wording with whichever is actually safer rather than leaving the two conflated under one status code",
+      "text": "When a spec AC names a specific HTTP status code for an authorization failure, decide explicitly between role-based denial (403) and ownership/existence-hiding denial (404) per case, and reconcile the spec's wording with whichever is actually safer rather than leaving the two conflated under one status code.",
+      "signal": "spec_precision_gap",
+      "scope": "auth",
+      "status": "candidate",
+      "features": [
+        "ticket-platform"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "spec.md AUTH-02 / app/api/v1/organizer.py (auth)"
+      ],
+      "created": "2026-08-14T12:39:42Z",
+      "last_seen": "2026-08-14T12:39:42Z"
+    },
+    {
+      "id": "L-004",
+      "key": "gate_fail::when a test tampers a base64url encoded signature token to prove verification rejects it flip a byte in the middle of the payload or corrupt multiple characters not just the value s last character the last base64 group can carry unused padding bits so a single character flip there has a measurable chance of leaving the decoded bytes unchanged and producing a flaky false pass",
+      "text": "When a test tampers a base64url-encoded signature/token to prove verification rejects it, flip a byte in the middle of the payload (or corrupt multiple characters), not just the value's last character — the last base64 group can carry unused padding bits, so a single-character flip there has a measurable chance of leaving the decoded bytes unchanged and producing a flaky false-pass.",
+      "signal": "gate_fail",
+      "scope": "test-design",
+      "status": "candidate",
+      "features": [
+        "ticket-platform"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "tests/unit/test_security.py:68 test_tampered_token_signature_is_rejected (test-design)"
+      ],
+      "created": "2026-08-14T12:47:08Z",
+      "last_seen": "2026-08-14T12:47:08Z"
+    }
+  ]
+}
