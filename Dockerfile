@@ -1,4 +1,3 @@
-# --- build stage ---
 FROM python:3.12-slim AS builder
 
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
@@ -12,7 +11,6 @@ RUN uv sync --frozen --no-install-project --no-dev
 COPY . .
 RUN uv sync --frozen --no-dev
 
-# --- runtime stage ---
 FROM python:3.12-slim AS runtime
 
 WORKDIR /app
