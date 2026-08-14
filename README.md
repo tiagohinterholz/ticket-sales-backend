@@ -13,7 +13,7 @@ O front-end vive num repositório separado: **[ticket-sales-platform-web](../fro
 - **Docker / Docker Compose** (Dockerfile multi-stage)
 - Autenticação JWT (`PyJWT`), hash de senha (`bcrypt`)
 - Integração com [TMDb](https://www.themoviedb.org/) (catálogo de filmes)
-- `pytest` (127 testes: unit + integration contra Postgres real)
+- `pytest` (133 testes: unit + integration contra Postgres real)
 
 ## Como rodar (Docker — recomendado)
 
@@ -77,7 +77,7 @@ Cartão de teste: qualquer número terminado em **`0000`** é recusado; qualquer
 ```bash
 uv run pytest tests/unit -q              # rápido, sem Postgres
 docker compose up -d db
-uv run pytest -q                          # suíte completa (127 testes)
+uv run pytest -q                          # suíte completa (133 testes)
 uv run ruff check .                       # lint
 ```
 
@@ -123,6 +123,7 @@ O que isso significou na prática:
 - **Design**: três abordagens de arquitetura foram avaliadas e comparadas antes de escolher (monólito modular vs. hexagonal completo vs. microsserviços) — a escolha e o porquê de descartar as outras duas estão documentados em `design.md`.
 - **Tasks**: quebra em 39 tarefas atômicas, cada uma com critério de teste derivado do spec (não da implementação), validado antes de cada commit.
 - **Execute**: implementação em lotes, cada um verificado (lint + testes + revisão de adequação dos testes) antes do commit atômico correspondente — sem trailer de coautoria nos commits, por pedido explícito.
+- **Validate**: ao final, um Verifier independente (sub-agente sem contexto de quem implementou) revalidou os 40 critérios de aceitação do zero contra o código real, rodou a suíte completa e injetou falhas propositais nos pontos mais críticos (lock de assento, validação de QR, checagem de evento errado, regra do cartão, checagem de dono do ingresso) pra provar que os testes realmente pegam regressão, não só existem do lado do código. Resultado: achou 2 gaps reais (portaria não mostrava quando um ingresso já usado foi validado; organizador não escolhia o filme entre os resultados da busca, só confiava no primeiro) — ambos corrigidos e revalidados antes deste commit. Relatório completo em `.specs/features/ticket-platform/validation.md`.
 
 **Decisões que vieram de mim (Tiago), não da ferramenta**, e que mudaram o rumo do projeto:
 
