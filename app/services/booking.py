@@ -5,6 +5,7 @@ from sqlalchemy import select, update
 from sqlalchemy.orm import Session
 
 from app.core.config import settings
+from app.core.timeutils import as_utc
 from app.models.event import Event
 from app.models.seat import Seat, SeatStatus
 from app.models.ticket import Ticket, TicketStatus
@@ -21,12 +22,6 @@ class CancelWindowError(Exception):
 
 class InvalidTicketStateError(Exception):
     pass
-
-
-def _as_utc(value: datetime) -> datetime:
-    if value.tzinfo is None:
-        return value.replace(tzinfo=UTC)
-    return value.astimezone(UTC)
 
 
 def hold_seat(db: Session, event_id, seat_id, user_id) -> Ticket:
@@ -101,7 +96,7 @@ def cancel_ticket(db: Session, ticket: Ticket, actor: User) -> Ticket:
 
     event = db.get(Event, ticket.event_id)
     now = datetime.now(UTC)
-    if _as_utc(event.starts_at) - now < timedelta(hours=settings.CANCEL_WINDOW_HOURS):
+    if as_utc(event.starts_at) - now < timedelta(hours=settings.CANCEL_WINDOW_HOURS):
         raise CancelWindowError("Cancellation window has passed")
 
     ticket.status = TicketStatus.CANCELLED

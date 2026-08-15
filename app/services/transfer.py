@@ -6,6 +6,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.core.config import settings
+from app.core.timeutils import as_utc
 from app.models.fake_email_log import FakeEmailLog
 from app.models.seat import Seat
 from app.models.ticket import Ticket, TicketStatus
@@ -32,12 +33,6 @@ class TransferInviteExpiredError(Exception):
 
 class TransferInviteForbiddenError(Exception):
     pass
-
-
-def _as_utc(value: datetime) -> datetime:
-    if value.tzinfo is None:
-        return value.replace(tzinfo=UTC)
-    return value.astimezone(UTC)
 
 
 def _get_invite_by_token(db: Session, token: str) -> TransferInvite:
@@ -88,7 +83,7 @@ def accept(db: Session, token: str, accepting_user_id: UUID) -> Ticket:
     invite = _get_invite_by_token(db, token)
     if invite.status != TransferInviteStatus.PENDING:
         raise TransferInviteNotPendingError("Transfer invite is no longer pending")
-    if _as_utc(invite.expires_at) < datetime.now(UTC):
+    if as_utc(invite.expires_at) < datetime.now(UTC):
         raise TransferInviteExpiredError("Transfer invite has expired")
 
     original_ticket = db.get(Ticket, invite.ticket_id)

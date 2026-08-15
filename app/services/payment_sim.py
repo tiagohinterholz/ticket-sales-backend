@@ -4,6 +4,7 @@ from uuid import UUID
 
 from sqlalchemy.orm import Session
 
+from app.core.timeutils import as_utc
 from app.models.payment_attempt import PaymentAttempt, PaymentResult
 from app.models.ticket import Ticket, TicketStatus
 from app.services import ticketing
@@ -19,12 +20,6 @@ class PaymentOutcome:
     payment_attempt: PaymentAttempt
 
 
-def _as_utc(value: datetime) -> datetime:
-    if value.tzinfo is None:
-        return value.replace(tzinfo=UTC)
-    return value.astimezone(UTC)
-
-
 def attempt_payment(db: Session, ticket_id: UUID, card_number: str) -> PaymentOutcome:
     ticket = db.get(Ticket, ticket_id)
     now = datetime.now(UTC)
@@ -32,7 +27,7 @@ def attempt_payment(db: Session, ticket_id: UUID, card_number: str) -> PaymentOu
         ticket is not None
         and ticket.status == TicketStatus.HELD
         and ticket.expires_at is not None
-        and _as_utc(ticket.expires_at) >= now
+        and as_utc(ticket.expires_at) >= now
     )
     if not hold_still_open:
         raise HoldExpiredError("Hold has expired")
