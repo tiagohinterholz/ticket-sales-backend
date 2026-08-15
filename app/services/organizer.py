@@ -21,16 +21,24 @@ class OrganizerEventSummary:
     percent_sold: float
 
 
-def _percent_sold(db: Session, event: Event) -> float:
-    sold_count = db.execute(
-        select(func.count(Ticket.id)).where(
-            Ticket.event_id == event.id,
+def _percent_sold(sold_count: int, capacity: int) -> float:
+    if capacity == 0:
+        return 0.0
+    return sold_count / capacity
+
+
+def _sold_counts_by_event(db: Session, event_ids: list[UUID]) -> dict[UUID, int]:
+    if not event_ids:
+        return {}
+    rows = db.execute(
+        select(Ticket.event_id, func.count(Ticket.id))
+        .where(
+            Ticket.event_id.in_(event_ids),
             Ticket.status.in_(SOLD_TICKET_STATUSES),
         )
-    ).scalar_one()
-    if event.capacity == 0:
-        return 0.0
-    return sold_count / event.capacity
+        .group_by(Ticket.event_id)
+    ).all()
+    return dict(rows)
 
 
 def list_organizer_events(
@@ -43,8 +51,12 @@ def list_organizer_events(
             .order_by(Event.starts_at)
         ).scalars()
     )
+    sold_counts = _sold_counts_by_event(db, [event.id for event in events])
     return [
-        OrganizerEventSummary(event=event, percent_sold=_percent_sold(db, event))
+        OrganizerEventSummary(
+            event=event,
+            percent_sold=_percent_sold(sold_counts.get(event.id, 0), event.capacity),
+        )
         for event in events
     ]
 

@@ -66,22 +66,31 @@ def hold_seat(db: Session, event_id, seat_id, user_id) -> Ticket:
 
 def sweep_expired_holds(db: Session, event_id=None) -> int:
     now = datetime.now(UTC)
-    stmt = select(Ticket).where(
+    stmt = select(Ticket.id, Ticket.seat_id).where(
         Ticket.status == TicketStatus.HELD, Ticket.expires_at < now
     )
     if event_id is not None:
         stmt = stmt.where(Ticket.event_id == event_id)
 
-    expired_tickets = list(db.execute(stmt).scalars().all())
-    for ticket in expired_tickets:
-        ticket.status = TicketStatus.EXPIRED
-        db.execute(
-            update(Seat)
-            .where(Seat.id == ticket.seat_id)
-            .values(status=SeatStatus.AVAILABLE, current_ticket_id=None)
-        )
+    expired = db.execute(stmt).all()
+    if not expired:
+        return 0
+
+    ticket_ids = [row.id for row in expired]
+    seat_ids = [row.seat_id for row in expired]
+
+    db.execute(
+        update(Ticket)
+        .where(Ticket.id.in_(ticket_ids))
+        .values(status=TicketStatus.EXPIRED)
+    )
+    db.execute(
+        update(Seat)
+        .where(Seat.id.in_(seat_ids))
+        .values(status=SeatStatus.AVAILABLE, current_ticket_id=None)
+    )
     db.commit()
-    return len(expired_tickets)
+    return len(ticket_ids)
 
 
 def cancel_ticket(db: Session, ticket: Ticket, actor: User) -> Ticket:
