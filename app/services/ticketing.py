@@ -1,6 +1,7 @@
 import hashlib
 import hmac
 import secrets
+from dataclasses import dataclass
 from datetime import UTC, datetime
 from enum import Enum
 from uuid import UUID
@@ -9,7 +10,9 @@ from sqlalchemy import select, update
 from sqlalchemy.orm import Session
 
 from app.core.config import settings
+from app.models.seat import Seat
 from app.models.ticket import Ticket, TicketStatus
+from app.models.user import User
 
 
 class GateResult(str, Enum):
@@ -30,6 +33,32 @@ def render_token(ticket: Ticket) -> str:
     ticket_id = str(ticket.id)
     signature = _sign(ticket_id, ticket.qr_secret)
     return f"{ticket_id}.{ticket.qr_secret}.{signature}"
+
+
+def parse_ticket_id(raw_token: str) -> UUID | None:
+    parts = raw_token.split(".")
+    if len(parts) != 3:
+        return None
+    try:
+        return UUID(parts[0])
+    except ValueError:
+        return None
+
+
+@dataclass(frozen=True)
+class GateTicketDetails:
+    ticket: Ticket
+    seat: Seat | None
+    customer: User | None
+
+
+def get_gate_details(db: Session, ticket_id: UUID) -> GateTicketDetails | None:
+    ticket = db.get(Ticket, ticket_id)
+    if ticket is None:
+        return None
+    seat = db.get(Seat, ticket.seat_id)
+    customer = db.get(User, ticket.owner_id)
+    return GateTicketDetails(ticket=ticket, seat=seat, customer=customer)
 
 
 def issue(ticket: Ticket) -> str:

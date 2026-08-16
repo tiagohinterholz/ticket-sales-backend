@@ -1,16 +1,16 @@
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.core.security import (
-    create_access_token,
-    get_current_user,
-    hash_password,
-    verify_password,
-)
+from app.core.security import create_access_token, get_current_user
 from app.db.session import get_db
-from app.models.user import Role, User
+from app.models.user import User
 from app.schemas.auth import LoginRequest, RegisterRequest, TokenResponse, UserRead
+from app.services.auth import (
+    EmailAlreadyRegisteredError,
+    InvalidCredentialsError,
+    authenticate,
+    register_customer,
+)
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -19,41 +19,26 @@ router = APIRouter(prefix="/auth", tags=["auth"])
     "/register", response_model=UserRead, status_code=status.HTTP_201_CREATED
 )
 def register(payload: RegisterRequest, db: Session = Depends(get_db)) -> User:
-    existing = db.execute(
-        select(User).where(User.email == payload.email)
-    ).scalar_one_or_none()
-    if existing is not None:
+    try:
+        return register_customer(db, payload.email, payload.password, payload.name)
+    except EmailAlreadyRegisteredError as exc:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail="Email already registered",
-        )
-
-    user = User(
-        email=payload.email,
-        password_hash=hash_password(payload.password),
-        role=Role.CUSTOMER,
-        name=payload.name,
-    )
-    db.add(user)
-    db.commit()
-    db.refresh(user)
-    return user
+        ) from exc
 
 
 @router.post("/login", response_model=TokenResponse)
 def login(payload: LoginRequest, db: Session = Depends(get_db)) -> TokenResponse:
-    invalid_credentials = HTTPException(
-        status_code=status.HTTP_401_UNAUTHORIZED,
-        detail="Invalid email or password",
-    )
-    user = db.execute(
-        select(User).where(User.email == payload.email)
-    ).scalar_one_or_none()
-    if user is None or not verify_password(payload.password, user.password_hash):
-        raise invalid_credentials
+    try:
+        user = authenticate(db, payload.email, payload.password)
+    except InvalidCredentialsError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid email or password",
+        ) from exc
 
-    token = create_access_token(user)
-    return TokenResponse(access_token=token)
+    return TokenResponse(access_token=create_access_token(user))
 
 
 @router.get("/me", response_model=UserRead)

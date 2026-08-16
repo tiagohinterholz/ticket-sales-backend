@@ -5,10 +5,10 @@ from sqlalchemy.orm import Session
 
 from app.core.security import require_role
 from app.db.session import get_db
-from app.models.ticket import Ticket
 from app.models.user import Role, User
 from app.schemas.payment import PaymentPayRead, PaymentRequest
 from app.services.payment_sim import HoldExpiredError, attempt_payment
+from app.services.ticket import TicketNotFoundError, get_owned_ticket
 
 router = APIRouter(prefix="/tickets", tags=["payments"])
 
@@ -20,11 +20,12 @@ def pay_ticket_endpoint(
     db: Session = Depends(get_db),
     current_user: User = Depends(require_role(Role.CUSTOMER)),
 ) -> PaymentPayRead:
-    ticket = db.get(Ticket, ticket_id)
-    if ticket is None or ticket.owner_id != current_user.id:
+    try:
+        get_owned_ticket(db, ticket_id, current_user.id)
+    except TicketNotFoundError as exc:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Ticket not found"
-        )
+        ) from exc
 
     try:
         outcome = attempt_payment(db, ticket_id, payload.card_number)

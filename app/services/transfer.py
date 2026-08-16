@@ -35,13 +35,37 @@ class TransferInviteForbiddenError(Exception):
     pass
 
 
-def _get_invite_by_token(db: Session, token: str) -> TransferInvite:
+def get_invite_by_token(db: Session, token: str) -> TransferInvite:
     invite = db.execute(
         select(TransferInvite).where(TransferInvite.token == token)
     ).scalar_one_or_none()
     if invite is None:
         raise TransferInviteNotFoundError("Transfer invite not found")
     return invite
+
+
+def list_incoming(db: Session, email: str) -> list[TransferInvite]:
+    return list(
+        db.execute(
+            select(TransferInvite).where(
+                TransferInvite.to_email == email,
+                TransferInvite.status == TransferInviteStatus.PENDING,
+                TransferInvite.expires_at > datetime.now(UTC),
+            )
+        ).scalars()
+    )
+
+
+def list_outgoing(db: Session, user_id: UUID) -> list[TransferInvite]:
+    return list(
+        db.execute(
+            select(TransferInvite).where(
+                TransferInvite.from_user_id == user_id,
+                TransferInvite.status == TransferInviteStatus.PENDING,
+                TransferInvite.expires_at > datetime.now(UTC),
+            )
+        ).scalars()
+    )
 
 
 def create_invite(
@@ -80,7 +104,7 @@ def create_invite(
 
 
 def accept(db: Session, token: str, accepting_user_id: UUID) -> Ticket:
-    invite = _get_invite_by_token(db, token)
+    invite = get_invite_by_token(db, token)
     if invite.status != TransferInviteStatus.PENDING:
         raise TransferInviteNotPendingError("Transfer invite is no longer pending")
     if as_utc(invite.expires_at) < datetime.now(UTC):
@@ -117,7 +141,7 @@ def accept(db: Session, token: str, accepting_user_id: UUID) -> Ticket:
 
 
 def decline(db: Session, token: str) -> TransferInvite:
-    invite = _get_invite_by_token(db, token)
+    invite = get_invite_by_token(db, token)
     if invite.status != TransferInviteStatus.PENDING:
         raise TransferInviteNotPendingError("Transfer invite is no longer pending")
 
@@ -128,7 +152,7 @@ def decline(db: Session, token: str) -> TransferInvite:
 
 
 def cancel_invite(db: Session, token: str, owner_id: UUID) -> TransferInvite:
-    invite = _get_invite_by_token(db, token)
+    invite = get_invite_by_token(db, token)
     if invite.from_user_id != owner_id:
         raise TransferInviteForbiddenError("Only the sender can cancel this invite")
     if invite.status != TransferInviteStatus.PENDING:
