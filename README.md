@@ -6,6 +6,8 @@ Este repositório é o **sistema de registro** do produto: além do código, car
 
 O front-end vive num repositório separado: **[ticket-sales-platform-web](../frontend)** (ver "Por que dois repositórios" abaixo).
 
+**Em produção**: API em [ticket-sales-api-production.up.railway.app](https://ticket-sales-api-production.up.railway.app) (docs em `/docs`), front em [ticket-sales-frontend-wine.vercel.app](https://ticket-sales-frontend-wine.vercel.app) — ver seção "Deploy" abaixo.
+
 ## Stack
 
 - **Python 3.12 + FastAPI**, gerenciado com [`uv`](https://docs.astral.sh/uv/)
@@ -83,6 +85,19 @@ uv run ruff check .                       # lint
 
 A suíte prova, contra Postgres real com threads concorrentes de verdade (não mock): que o mesmo assento não é vendido duas vezes (`tests/integration/test_booking_concurrency.py`) e que o mesmo ingresso não é validado duas vezes na portaria (`tests/integration/test_ticketing.py`).
 
+## Deploy
+
+API em produção no **Railway** (Postgres provisionado no mesmo projeto), front na **Vercel** — ver URLs no topo deste README.
+
+Pipeline em `.github/workflows/ci-deploy.yml`, dois jobs:
+
+1. **`test`**: `ruff check`, `ruff format --check`, `pytest` (contra um Postgres efêmero subido como service container do próprio Actions) e `pip-audit --strict` (vulnerabilidades conhecidas nas dependências).
+2. **`deploy`**: só roda se `test` passar **e** o push for na `main` (`needs: test` + `if: github.ref == 'refs/heads/main'`). Autentica com um *project token* do Railway (`RAILWAY_TOKEN`, escopado só a este projeto) e manda o código com `railway up --service $RAILWAY_SERVICE_ID` — o próprio Railway builda a imagem a partir do `Dockerfile` do repositório.
+
+Deploy é acionado pelo Actions, não pela integração nativa Git do Railway — decisão deliberada (ver "Decisões que vieram de mim" abaixo).
+
+Variáveis de ambiente configuradas direto no serviço do Railway (não no repositório): `DATABASE_URL` (referência às variáveis do serviço Postgres do mesmo projeto, com o driver `+psycopg` explícito), `JWT_SECRET`, `QR_SECRET_KEY`, `TMDB_API_KEY`, `CORS_ORIGINS` (URL do front na Vercel). O container escuta na porta que o Railway injeta via `$PORT` (`entrypoint.sh` usa `${PORT:-8000}`, com fallback pro Docker Compose local).
+
 ## Papéis e autenticação
 
 Três papéis: `CUSTOMER` (reserva, paga, recebe ingresso), `ORGANIZER` (cria/gerencia eventos), `GATE_STAFF` (valida ingressos). Só `CUSTOMER` tem cadastro público (`POST /auth/register`); `ORGANIZER` e `GATE_STAFF` só existem via seed — reflete controle de acesso real (a plataforma concede esses papéis, não é auto-serviço).
@@ -107,9 +122,7 @@ O desafio sugere um repositório público geral. Optei por dividir back-end e fr
 - **Sem endpoint de criação de `ORGANIZER`/`GATE_STAFF`**: por design (ver "Papéis e autenticação" acima) — só via seed.
 - **`GATE_STAFF` é global**: não existe vínculo entre um operador de portaria e um evento/organizador específico — qualquer conta de portaria valida ingressos de qualquer evento. Não há modelo de dados para restringir isso; ficou fora do escopo do desafio.
 - **Sem edição/cancelamento de evento**: não existe `PATCH`/`DELETE` em `/events` — o organizador não consegue editar ou cancelar um evento já publicado, mesmo sem ingressos vendidos. Não era um requisito obrigatório do desafio, mas fica registrado aqui.
-- **CORS aberto** (`allow_origins=["*"]`) — aceitável para o escopo do desafio (auth via Bearer token, não cookie, então CSRF clássico não se aplica); em produção real restringiria à origem do front deployado.
 - **`cancel_ticket`** usa leitura-depois-escrita em vez de um `UPDATE ... WHERE` atômico (diferente de `hold_seat`/`ticketing.validate`, que são atômicos por serem os invariantes centrais do desafio) — uma corrida teórica de cancelamento duplo existe, mas não é concretamente explorável dado que pagamento é simulado e o estado final é idempotente.
-- **Deploy não realizado nesta rodada** — projeto está estruturado para deploy simples (Vercel para o front, Render/Railway para API+Postgres), mas não foi publicado dentro do prazo do desafio.
 
 ## Uso de IA
 
@@ -131,10 +144,13 @@ O que isso significou na prática:
 - Testei a aplicação rodando de verdade (não só os testes automatizados): peguei minha própria chave da TMDb, descobri que era do tipo v4 (Bearer token) enquanto o código esperava v3 (`api_key` na query string), e mandei corrigir — sem isso, a criação de eventos com filme real nunca teria funcionado fora dos testes com mock.
 - Ajustei o volume de dados do seed (de 1 organizador/2 clientes/1 portaria/1 evento para 2/4/2/4) depois de ver o resultado rodando.
 - Revisei prints reais da tela de listagem de eventos e identifiquei que os cartazes não apareciam — rastreei até dados de teste residuais no banco (criados por sessões anteriores de QA com URLs de imagem falsas) e limpei antes do seed definitivo rodar.
-- Pedi revisão de performance nas queries do organizador e achei 2 N+1 reais: `organizer.list_organizer_events` fazia um `COUNT` por evento em vez de um `GROUP BY` só, e `booking.sweep_expired_holds` (roda a cada 60s via scheduler) fazia um `UPDATE` de assento por ingresso expirado dentro de um loop — os dois viraram query única em lote.
+- Revisei performance nas queries do organizador e achei 2 N+1 reais: `organizer.list_organizer_events` fazia um `COUNT` por evento em vez de um `GROUP BY` só, e `booking.sweep_expired_holds` (roda a cada 60s via scheduler) fazia um `UPDATE` de assento por ingresso expirado dentro de um loop — os dois viraram query única em lote.
 - Encontrei `_as_utc` copiado e colado em 3 services (`booking.py`, `payment_sim.py`, `transfer.py`) — extraído pra `app/core/timeutils.py`, único ponto de verdade.
 - Ao revisar `events.py` percebi que era o único router sem service próprio — toda a lógica de resolver filme, montar o mapa de assentos e as queries de listagem/detalhe estava direto no controller, inclusive uma query de assentos **duplicada** com a que já existia em `organizer.py`. Extraí `app/services/event.py` e `app/services/seat.py`, e corrigi de quebra o `seed.py`, que tinha reimplementado a própria geração de `row_label` com um algoritmo diferente (só suportava até 26 fileiras) — outra duplicação que só apareceu por causa dessa revisão.
 - Fiz o mesmo pente-fino no resto dos routers e achei que `auth.py` **não tinha service nenhum** (registro/login batiam no banco direto no controller) e que `tickets.py`, `payments.py`, `gate.py` e `transfers.py` também acessavam o banco direto em vários pontos — inclusive duas queries de negócio real (convites de transferência pendentes) que eu mesmo tinha acabado de colocar direto no router numa rodada anterior. Criei `app/services/auth.py` e `app/services/ticket.py`, e estendi `ticketing.py`/`transfer.py` — hoje nenhum router do projeto toca no banco diretamente, todos passam por um service.
+- Escolhi Railway em vez de Heroku pro deploy da API depois de comparar os dois: Heroku com o tier pago mais barato dorme após 30 min sem tráfego — inaceitável aqui porque a API roda um `BackgroundScheduler` in-process (`app/main.py`) que varre holds expirados a cada 60s; um dyno dormindo junto pararia esse scheduler. Railway não tem esse modelo de sleep no tier pago e cobre app + Postgres juntos, com dyno always-on + addon de Postgres separado.
+- Optei pelo deploy ser acionado pelo próprio GitHub Actions (`railway up` via CLI, autenticado por token de projeto) em vez da integração nativa Git do Railway com "Wait for CI" — o recurso nativo tem vários relatos na comunidade deles de ficar travado em "waiting" mesmo com o Actions já verde. Acionar via CLI é determinístico: só o meu workflow decide quando o deploy acontece.
+- Restringi o CORS após ter todas URls, que estava com `allow_origins=["*"]` — hoje só aceita a origem do front na Vercel, configurável via `CORS_ORIGINS` (não hardcoded no código, pra funcionar diferente em dev e produção sem precisar mudar código).
 
 **O que a IA fez**: auxílio na implementação de código (models, services, routers, migrations, testes, componentes de front-end, hooks), toda a documentação de processo em `.specs/`, e o histórico de commits granular que reflete cada tarefa.
 
