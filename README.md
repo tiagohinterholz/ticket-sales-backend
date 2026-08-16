@@ -13,7 +13,7 @@ O front-end vive num repositório separado: **[ticket-sales-platform-web](../fro
 - **Docker / Docker Compose** (Dockerfile multi-stage)
 - Autenticação JWT (`PyJWT`), hash de senha (`bcrypt`)
 - Integração com [TMDb](https://www.themoviedb.org/) (catálogo de filmes)
-- `pytest` (133 testes: unit + integration contra Postgres real)
+- `pytest` (139 testes: unit + integration contra Postgres real)
 
 ## Como rodar (Docker — recomendado)
 
@@ -77,7 +77,7 @@ Cartão de teste: qualquer número terminado em **`0000`** é recusado; qualquer
 ```bash
 uv run pytest tests/unit -q              # rápido, sem Postgres
 docker compose up -d db
-uv run pytest -q                          # suíte completa (133 testes)
+uv run pytest -q                          # suíte completa (139 testes)
 uv run ruff check .                       # lint
 ```
 
@@ -99,7 +99,7 @@ Este repositório versiona o processo inteiro de planejamento, não só o códig
 
 ## Por que dois repositórios (não um monorepo)
 
-O desafio pede "um repositório público" (singular). Optei, junto com o usuário, por dividir back-end e front-end em dois repositórios GitHub independentes — cada um clona, sobe e roda sozinho. Motivo e trade-off completo em `AD-004` (`.specs/STATE.md`): principal ganho é cada repo ser autocontido (o back-end sobe com um `docker compose up`, sem depender de nada do front); o custo é que não existe um único `docker compose up` que suba os dois juntos — é preciso subir a API (aqui) e depois o front (`ticket-sales-platform-web`, apontando `VITE_API_URL` para `http://localhost:8000`).
+O desafio sugere um repositório público geral. Optei por dividir back-end e front-end em dois repositórios GitHub independentes — cada um clona, sobe e roda sozinho. Motivo e trade-off completo em `AD-004` (`.specs/STATE.md`): principal ganho é cada repo ser autocontido (o back-end sobe com um `docker compose up`, sem depender de nada do front); o custo é que não existe um único `docker compose up` que suba os dois juntos — é preciso subir a API (aqui) e depois o front (`ticket-sales-platform-web`, apontando `VITE_API_URL` para `http://localhost:8000`).
 
 ## Limitações conhecidas
 
@@ -131,7 +131,11 @@ O que isso significou na prática:
 - Testei a aplicação rodando de verdade (não só os testes automatizados): peguei minha própria chave da TMDb, descobri que era do tipo v4 (Bearer token) enquanto o código esperava v3 (`api_key` na query string), e mandei corrigir — sem isso, a criação de eventos com filme real nunca teria funcionado fora dos testes com mock.
 - Ajustei o volume de dados do seed (de 1 organizador/2 clientes/1 portaria/1 evento para 2/4/2/4) depois de ver o resultado rodando.
 - Revisei prints reais da tela de listagem de eventos e identifiquei que os cartazes não apareciam — rastreei até dados de teste residuais no banco (criados por sessões anteriores de QA com URLs de imagem falsas) e limpei antes do seed definitivo rodar.
+- Pedi revisão de performance nas queries do organizador e achei 2 N+1 reais: `organizer.list_organizer_events` fazia um `COUNT` por evento em vez de um `GROUP BY` só, e `booking.sweep_expired_holds` (roda a cada 60s via scheduler) fazia um `UPDATE` de assento por ingresso expirado dentro de um loop — os dois viraram query única em lote.
+- Encontrei `_as_utc` copiado e colado em 3 services (`booking.py`, `payment_sim.py`, `transfer.py`) — extraído pra `app/core/timeutils.py`, único ponto de verdade.
+- Ao revisar `events.py` percebi que era o único router sem service próprio — toda a lógica de resolver filme, montar o mapa de assentos e as queries de listagem/detalhe estava direto no controller, inclusive uma query de assentos **duplicada** com a que já existia em `organizer.py`. Extraí `app/services/event.py` e `app/services/seat.py`, e corrigi de quebra o `seed.py`, que tinha reimplementado a própria geração de `row_label` com um algoritmo diferente (só suportava até 26 fileiras) — outra duplicação que só apareceu por causa dessa revisão.
+- Fiz o mesmo pente-fino no resto dos routers e achei que `auth.py` **não tinha service nenhum** (registro/login batiam no banco direto no controller) e que `tickets.py`, `payments.py`, `gate.py` e `transfers.py` também acessavam o banco direto em vários pontos — inclusive duas queries de negócio real (convites de transferência pendentes) que eu mesmo tinha acabado de colocar direto no router numa rodada anterior. Criei `app/services/auth.py` e `app/services/ticket.py`, e estendi `ticketing.py`/`transfer.py` — hoje nenhum router do projeto toca no banco diretamente, todos passam por um service.
 
-**O que a IA fez**: auxilio na implementacao de código (models, services, routers, migrations, testes, componentes de front-end, hooks), e toda a documentação de processo em `.specs/`, e o histórico de commits granular que reflete cada tarefa.
+**O que a IA fez**: auxílio na implementação de código (models, services, routers, migrations, testes, componentes de front-end, hooks), toda a documentação de processo em `.specs/`, e o histórico de commits granular que reflete cada tarefa.
 
 Não houve fluxo BMAD nem PRD separado — o próprio `.specs/` (`spec.md` → `design.md` → `tasks.md` → `STATE.md`) cumpriu esse papel e está versionado neste repositório.
