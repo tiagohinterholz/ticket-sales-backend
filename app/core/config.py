@@ -11,6 +11,13 @@ class Settings(BaseSettings):
     SEAT_HOLD_MINUTES: int = 5
     TRANSFER_EXPIRY_HOURS: int = 24
     CANCEL_WINDOW_HOURS: int = 2
+    CORS_ORIGINS: str = "http://localhost:5173"
+
+    @property
+    def cors_origins_list(self) -> list[str]:
+        return [
+            origin.strip() for origin in self.CORS_ORIGINS.split(",") if origin.strip()
+        ]
 
 
 settings = Settings()

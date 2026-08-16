@@ -13,6 +13,7 @@ from app.api.v1.organizer import router as organizer_router
 from app.api.v1.payments import router as payments_router
 from app.api.v1.tickets import router as tickets_router
 from app.api.v1.transfers import router as transfers_router
+from app.core.config import settings
 from app.db.session import SessionLocal
 from app.services.booking import sweep_expired_holds
 
@@ -45,7 +46,7 @@ app = FastAPI(title="Ticket Sales Platform API", lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=settings.cors_origins_list,
     allow_methods=["*"],
     allow_headers=["*"],
 )
