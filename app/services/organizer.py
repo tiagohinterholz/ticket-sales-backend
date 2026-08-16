@@ -5,7 +5,6 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.models.event import Event
-from app.models.seat import Seat
 from app.models.ticket import Ticket, TicketStatus
 
 SOLD_TICKET_STATUSES = (TicketStatus.PAID, TicketStatus.USED)
@@ -66,13 +65,3 @@ def get_organizer_event(db: Session, organizer_id: UUID, event_id: UUID) -> Even
     if event is None or event.organizer_id != organizer_id:
         raise EventNotOwnedError("Event not found")
     return event
-
-
-def get_event_seats(db: Session, event_id: UUID) -> list[Seat]:
-    return list(
-        db.execute(
-            select(Seat)
-            .where(Seat.event_id == event_id)
-            .order_by(Seat.row_label, Seat.seat_number)
-        ).scalars()
-    )

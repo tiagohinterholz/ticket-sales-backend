@@ -12,6 +12,7 @@ from app.models.ticket import Ticket, TicketStatus
 from app.models.user import Role, User
 from app.services import ticketing
 from app.services.catalog import CatalogUnavailableError, search_movies
+from app.services.event import row_label as compute_row_label
 
 FALLBACK_TMDB_MOVIE_ID = 0
 
@@ -154,21 +155,21 @@ def _create_event_with_seats(
     overrides_by_position = {
         (o.row_label, o.seat_number): o for o in spec.overrides
     }
-    row_labels = [chr(ord("A") + i) for i in range(spec.rows)]
     demo_qr_token = None
 
-    for row_label in row_labels:
+    for row_index in range(spec.rows):
+        label = compute_row_label(row_index)
         for seat_number in range(1, spec.seats_per_row + 1):
             seat = Seat(
                 event_id=event.id,
-                row_label=row_label,
+                row_label=label,
                 seat_number=seat_number,
                 status=SeatStatus.AVAILABLE,
             )
             db.add(seat)
             db.flush()
 
-            override = overrides_by_position.get((row_label, seat_number))
+            override = overrides_by_position.get((label, seat_number))
             if override is None:
                 continue
 

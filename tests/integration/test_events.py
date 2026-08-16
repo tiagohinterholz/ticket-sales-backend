@@ -42,6 +42,7 @@ def _mock_search_movies(monkeypatch, movies: list[MovieResult] | None = None):
         return result
 
     monkeypatch.setattr("app.api.v1.events.search_movies", fake_search_movies)
+    monkeypatch.setattr("app.services.event.search_movies", fake_search_movies)
 
 
 def _mock_search_movies_unavailable(monkeypatch):
@@ -49,6 +50,7 @@ def _mock_search_movies_unavailable(monkeypatch):
         raise CatalogUnavailableError("TMDb is down")
 
     monkeypatch.setattr("app.api.v1.events.search_movies", fake_search_movies)
+    monkeypatch.setattr("app.services.event.search_movies", fake_search_movies)
 
 
 class TestSearchCatalog:

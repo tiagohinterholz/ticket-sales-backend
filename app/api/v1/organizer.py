@@ -10,10 +10,10 @@ from app.schemas.event import EventDetailRead, EventRead, SeatRead
 from app.schemas.organizer import OrganizerEventRead
 from app.services.organizer import (
     EventNotOwnedError,
-    get_event_seats,
     get_organizer_event,
     list_organizer_events,
 )
+from app.services.seat import list_for_event
 
 router = APIRouter(prefix="/organizer", tags=["organizer"])
 
@@ -46,7 +46,7 @@ def get_event_seat_map(
             status_code=status.HTTP_404_NOT_FOUND, detail="Event not found"
         ) from exc
 
-    seats = get_event_seats(db, event_id)
+    seats = list_for_event(db, event_id)
     return EventDetailRead(
         **EventRead.model_validate(event).model_dump(),
         seats=[SeatRead.model_validate(seat) for seat in seats],
