@@ -28,7 +28,9 @@ class TestCreateInvite:
         ticket = make_ticket(db_session, event, seat, owner, status=TicketStatus.HELD)
 
         with pytest.raises(transfer.InvalidTicketStateError):
-            transfer.create_invite(db_session, ticket.id, owner.id, "someone@example.com")
+            transfer.create_invite(
+                db_session, ticket.id, owner.id, "someone@example.com"
+            )
 
     def test_email_matching_existing_customer_resolves_to_user_id_no_fake_email(
         self, db_session: Session
@@ -86,7 +88,9 @@ class TestAccept:
         seat.current_ticket_id = ticket.id
         db_session.commit()
         original_qr_secret = ticket.qr_secret
-        invite = make_transfer_invite(db_session, ticket, owner, to_user_id=recipient.id)
+        invite = make_transfer_invite(
+            db_session, ticket, owner, to_user_id=recipient.id
+        )
 
         new_ticket = transfer.accept(db_session, invite.token, recipient.id)
 
@@ -105,11 +109,15 @@ class TestAccept:
         refreshed_invite = db_session.get(type(invite), invite.id)
         assert refreshed_invite.status == TransferInviteStatus.ACCEPTED
 
-        old_owner_active_tickets = db_session.execute(
-            select(Ticket).where(
-                Ticket.owner_id == owner.id, Ticket.status == TicketStatus.PAID
+        old_owner_active_tickets = (
+            db_session.execute(
+                select(Ticket).where(
+                    Ticket.owner_id == owner.id, Ticket.status == TicketStatus.PAID
+                )
             )
-        ).scalars().all()
+            .scalars()
+            .all()
+        )
         assert ticket.id not in [t.id for t in old_owner_active_tickets]
 
     def test_expired_invite_cannot_be_accepted_and_ticket_stays_paid(
@@ -137,14 +145,18 @@ class TestAccept:
 
 
 class TestDecline:
-    def test_decline_keeps_ticket_paid_and_invalidates_the_link(self, db_session: Session):
+    def test_decline_keeps_ticket_paid_and_invalidates_the_link(
+        self, db_session: Session
+    ):
         organizer = make_user(db_session, Role.ORGANIZER)
         owner = make_user(db_session, Role.CUSTOMER)
         recipient = make_user(db_session, Role.CUSTOMER)
         event = make_event(db_session, organizer)
         seat = make_seat(db_session, event, status=SeatStatus.SOLD)
         ticket = make_ticket(db_session, event, seat, owner, status=TicketStatus.PAID)
-        invite = make_transfer_invite(db_session, ticket, owner, to_user_id=recipient.id)
+        invite = make_transfer_invite(
+            db_session, ticket, owner, to_user_id=recipient.id
+        )
 
         declined_invite = transfer.decline(db_session, invite.token)
 
@@ -166,7 +178,9 @@ class TestCancelInvite:
         event = make_event(db_session, organizer)
         seat = make_seat(db_session, event, status=SeatStatus.SOLD)
         ticket = make_ticket(db_session, event, seat, owner, status=TicketStatus.PAID)
-        invite = make_transfer_invite(db_session, ticket, owner, to_user_id=recipient.id)
+        invite = make_transfer_invite(
+            db_session, ticket, owner, to_user_id=recipient.id
+        )
 
         cancelled_invite = transfer.cancel_invite(db_session, invite.token, owner.id)
 

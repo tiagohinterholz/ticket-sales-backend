@@ -24,9 +24,15 @@ class TestValidateEndpoint:
         gate_staff = make_user(db_session, Role.GATE_STAFF)
         customer = make_user(db_session, Role.CUSTOMER)
         event = make_event(db_session, organizer)
-        seat = make_seat(db_session, event, status=SeatStatus.SOLD, row_label="B", seat_number=7)
+        seat = make_seat(
+            db_session, event, status=SeatStatus.SOLD, row_label="B", seat_number=7
+        )
         ticket = make_ticket(
-            db_session, event, seat, customer, TicketStatus.PAID,
+            db_session,
+            event,
+            seat,
+            customer,
+            TicketStatus.PAID,
             paid_at=datetime.now(UTC),
         )
         token = ticketing.issue(ticket)
@@ -57,7 +63,11 @@ class TestValidateEndpoint:
         seat = make_seat(db_session, event, status=SeatStatus.SOLD)
         used_at = datetime.now(UTC) - timedelta(minutes=5)
         ticket = make_ticket(
-            db_session, event, seat, customer, TicketStatus.USED,
+            db_session,
+            event,
+            seat,
+            customer,
+            TicketStatus.USED,
             paid_at=datetime.now(UTC) - timedelta(minutes=10),
             used_at=used_at,
         )
@@ -86,7 +96,11 @@ class TestValidateEndpoint:
         gate_event = make_event(db_session, organizer)
         seat = make_seat(db_session, ticket_event, status=SeatStatus.SOLD)
         ticket = make_ticket(
-            db_session, ticket_event, seat, customer, TicketStatus.PAID,
+            db_session,
+            ticket_event,
+            seat,
+            customer,
+            TicketStatus.PAID,
             paid_at=datetime.now(UTC),
         )
         token = ticketing.issue(ticket)
@@ -127,7 +141,11 @@ class TestValidateEndpoint:
         seat = make_seat(db_session, event, status=SeatStatus.SOLD)
         used_at = datetime.now(UTC) - timedelta(minutes=5)
         ticket = make_ticket(
-            db_session, event, seat, customer, TicketStatus.USED,
+            db_session,
+            event,
+            seat,
+            customer,
+            TicketStatus.USED,
             paid_at=datetime.now(UTC) - timedelta(minutes=10),
             used_at=used_at,
         )
@@ -153,7 +171,9 @@ class TestValidateEndpoint:
         assert token_body["seat"] is None
         assert token_body["customer_name"] is None
         assert token_body["customer_email"] is None
-        assert datetime.fromisoformat(token_body["used_at"]).replace(tzinfo=UTC) == used_at
+        assert (
+            datetime.fromisoformat(token_body["used_at"]).replace(tzinfo=UTC) == used_at
+        )
 
     def test_validate_by_customer_returns_403(
         self, client: TestClient, db_session: Session

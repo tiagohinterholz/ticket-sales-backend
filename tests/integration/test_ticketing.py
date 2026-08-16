@@ -36,7 +36,10 @@ class TestIssue:
 
         assert ticket.qr_secret != previous_secret
         assert token.count(".") == 2
-        assert ticketing.validate(db_session, token, event.id) == ticketing.GateResult.VALID
+        assert (
+            ticketing.validate(db_session, token, event.id)
+            == ticketing.GateResult.VALID
+        )
 
 
 class TestRenderToken:

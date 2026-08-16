@@ -17,9 +17,7 @@ class EventStatus(str, enum.Enum):
 class Event(Base, UUIDPKMixin, TimestampMixin):
     __tablename__ = "events"
 
-    organizer_id: Mapped[UUID] = mapped_column(
-        ForeignKey("users.id"), nullable=False
-    )
+    organizer_id: Mapped[UUID] = mapped_column(ForeignKey("users.id"), nullable=False)
     tmdb_movie_id: Mapped[int] = mapped_column(Integer, nullable=False)
     title: Mapped[str] = mapped_column(String, nullable=False)
     poster_url: Mapped[str | None] = mapped_column(String, nullable=True)

@@ -18,6 +18,4 @@ def get_owned_ticket(db: Session, ticket_id: UUID, owner_id: UUID) -> Ticket:
 
 
 def list_for_owner(db: Session, owner_id: UUID) -> list[Ticket]:
-    return list(
-        db.execute(select(Ticket).where(Ticket.owner_id == owner_id)).scalars()
-    )
+    return list(db.execute(select(Ticket).where(Ticket.owner_id == owner_id)).scalars())

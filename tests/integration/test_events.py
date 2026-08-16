@@ -107,9 +107,7 @@ class TestSearchCatalog:
 
         assert response.status_code == 403
 
-    def test_search_without_auth_returns_401(
-        self, client: TestClient, monkeypatch
-    ):
+    def test_search_without_auth_returns_401(self, client: TestClient, monkeypatch):
         _mock_search_movies(monkeypatch)
 
         response = client.get("/events/catalog", params={"query": "matrix"})
@@ -137,9 +135,13 @@ class TestCreateEvent:
         assert body["tmdb_movie_id"] == 603
         assert body["price_cents"] == 2500
 
-        seats = db_session.execute(
-            select(Seat).where(Seat.event_id == uuid.UUID(body["id"]))
-        ).scalars().all()
+        seats = (
+            db_session.execute(
+                select(Seat).where(Seat.event_id == uuid.UUID(body["id"]))
+            )
+            .scalars()
+            .all()
+        )
         assert len(seats) == 6
         assert all(seat.status == SeatStatus.AVAILABLE for seat in seats)
         assert {seat.row_label for seat in seats} == {"A", "B"}
@@ -260,9 +262,7 @@ class TestCreateEvent:
         self, client: TestClient, db_session: Session, monkeypatch
     ):
         organizer = _make_user(db_session, Role.ORGANIZER)
-        _mock_search_movies(
-            monkeypatch, [_movie(title="The Matrix", tmdb_id=603)]
-        )
+        _mock_search_movies(monkeypatch, [_movie(title="The Matrix", tmdb_id=603)])
 
         response = client.post(
             "/events",
@@ -319,9 +319,7 @@ class TestListEvents:
     def test_list_events_with_no_match_returns_empty_list_with_metadata(
         self, client: TestClient
     ):
-        response = client.get(
-            "/events", params={"q": f"nonexistent-{uuid.uuid4()}"}
-        )
+        response = client.get("/events", params={"q": f"nonexistent-{uuid.uuid4()}"})
 
         assert response.status_code == 200
         body = response.json()

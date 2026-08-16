@@ -17,14 +17,34 @@ from app.services.event import row_label as compute_row_label
 FALLBACK_TMDB_MOVIE_ID = 0
 
 USERS = [
-    ("organizador1@ticketsales.dev", "organizador123", Role.ORGANIZER, "Organizador Um"),
-    ("organizador2@ticketsales.dev", "organizador123", Role.ORGANIZER, "Organizador Dois"),
+    (
+        "organizador1@ticketsales.dev",
+        "organizador123",
+        Role.ORGANIZER,
+        "Organizador Um",
+    ),
+    (
+        "organizador2@ticketsales.dev",
+        "organizador123",
+        Role.ORGANIZER,
+        "Organizador Dois",
+    ),
     ("cliente1@ticketsales.dev", "cliente123", Role.CUSTOMER, "Cliente Um"),
     ("cliente2@ticketsales.dev", "cliente123", Role.CUSTOMER, "Cliente Dois"),
     ("cliente3@ticketsales.dev", "cliente123", Role.CUSTOMER, "Cliente Tres"),
     ("cliente4@ticketsales.dev", "cliente123", Role.CUSTOMER, "Cliente Quatro"),
-    ("portaria1@ticketsales.dev", "portaria123", Role.GATE_STAFF, "Operador de Portaria Um"),
-    ("portaria2@ticketsales.dev", "portaria123", Role.GATE_STAFF, "Operador de Portaria Dois"),
+    (
+        "portaria1@ticketsales.dev",
+        "portaria123",
+        Role.GATE_STAFF,
+        "Operador de Portaria Um",
+    ),
+    (
+        "portaria2@ticketsales.dev",
+        "portaria123",
+        Role.GATE_STAFF,
+        "Operador de Portaria Dois",
+    ),
 ]
 
 
@@ -59,8 +79,12 @@ EVENT_SPECS = [
         price_cents=4500,
         days_from_now=7,
         overrides=[
-            SeatOverride("A", 1, SeatStatus.HOLD, TicketStatus.HELD, "cliente1@ticketsales.dev"),
-            SeatOverride("A", 2, SeatStatus.SOLD, TicketStatus.PAID, "cliente2@ticketsales.dev"),
+            SeatOverride(
+                "A", 1, SeatStatus.HOLD, TicketStatus.HELD, "cliente1@ticketsales.dev"
+            ),
+            SeatOverride(
+                "A", 2, SeatStatus.SOLD, TicketStatus.PAID, "cliente2@ticketsales.dev"
+            ),
         ],
     ),
     EventSpec(
@@ -72,7 +96,9 @@ EVENT_SPECS = [
         price_cents=4000,
         days_from_now=10,
         overrides=[
-            SeatOverride("A", 1, SeatStatus.SOLD, TicketStatus.PAID, "cliente3@ticketsales.dev"),
+            SeatOverride(
+                "A", 1, SeatStatus.SOLD, TicketStatus.PAID, "cliente3@ticketsales.dev"
+            ),
         ],
     ),
     EventSpec(
@@ -84,7 +110,9 @@ EVENT_SPECS = [
         price_cents=5000,
         days_from_now=14,
         overrides=[
-            SeatOverride("B", 2, SeatStatus.HOLD, TicketStatus.HELD, "cliente4@ticketsales.dev"),
+            SeatOverride(
+                "B", 2, SeatStatus.HOLD, TicketStatus.HELD, "cliente4@ticketsales.dev"
+            ),
         ],
     ),
     EventSpec(
@@ -100,11 +128,15 @@ EVENT_SPECS = [
 ]
 
 
-def _get_or_create_user(db: Session, email: str, password: str, role: Role, name: str) -> User:
+def _get_or_create_user(
+    db: Session, email: str, password: str, role: Role, name: str
+) -> User:
     user = db.execute(select(User).where(User.email == email)).scalar_one_or_none()
     if user is not None:
         return user
-    user = User(email=email, password_hash=hash_password(password), role=role, name=name)
+    user = User(
+        email=email, password_hash=hash_password(password), role=role, name=name
+    )
     db.add(user)
     db.commit()
     db.refresh(user)
@@ -115,7 +147,9 @@ def _resolve_movie(query: str) -> tuple[int, str, str | None]:
     try:
         results = search_movies(query)
     except CatalogUnavailableError:
-        print(f"WARNING: TMDb catalog unavailable, seeding event for {query!r} without a real poster")
+        print(
+            f"WARNING: TMDb catalog unavailable, seeding event for {query!r} without a real poster"
+        )
         return FALLBACK_TMDB_MOVIE_ID, query, None
 
     for result in results:
@@ -126,7 +160,9 @@ def _resolve_movie(query: str) -> tuple[int, str, str | None]:
         first = results[0]
         return first.tmdb_id, first.title, first.poster_url
 
-    print(f"WARNING: TMDb returned no results for {query!r}, seeding event without a real poster")
+    print(
+        f"WARNING: TMDb returned no results for {query!r}, seeding event without a real poster"
+    )
     return FALLBACK_TMDB_MOVIE_ID, query, None
 
 
@@ -152,9 +188,7 @@ def _create_event_with_seats(
     db.commit()
     db.refresh(event)
 
-    overrides_by_position = {
-        (o.row_label, o.seat_number): o for o in spec.overrides
-    }
+    overrides_by_position = {(o.row_label, o.seat_number): o for o in spec.overrides}
     demo_qr_token = None
 
     for row_index in range(spec.rows):
@@ -182,8 +216,12 @@ def _create_event_with_seats(
                 owner_id=customer.id,
                 status=override.ticket_status,
                 qr_secret="",
-                held_at=now if override.ticket_status == TicketStatus.HELD else now - timedelta(minutes=10),
-                expires_at=now + timedelta(minutes=5) if override.ticket_status == TicketStatus.HELD else None,
+                held_at=now
+                if override.ticket_status == TicketStatus.HELD
+                else now - timedelta(minutes=10),
+                expires_at=now + timedelta(minutes=5)
+                if override.ticket_status == TicketStatus.HELD
+                else None,
                 paid_at=now if override.ticket_status == TicketStatus.PAID else None,
             )
             db.add(ticket)
@@ -198,9 +236,13 @@ def _create_event_with_seats(
     return event, demo_qr_token
 
 
-def _find_gate_demo(db: Session, spec: EventSpec, organizer: User) -> tuple[Event, str] | None:
+def _find_gate_demo(
+    db: Session, spec: EventSpec, organizer: User
+) -> tuple[Event, str] | None:
     event = db.execute(
-        select(Event).where(Event.organizer_id == organizer.id, Event.venue == spec.venue)
+        select(Event).where(
+            Event.organizer_id == organizer.id, Event.venue == spec.venue
+        )
     ).scalar_one_or_none()
     if event is None:
         return None
@@ -228,14 +270,18 @@ def _find_gate_demo(db: Session, spec: EventSpec, organizer: User) -> tuple[Even
     return event, ticketing.render_token(ticket)
 
 
-def _print_summary(created_events: list[tuple[EventSpec, Event]], gate_demo: tuple[Event, str] | None) -> None:
+def _print_summary(
+    created_events: list[tuple[EventSpec, Event]], gate_demo: tuple[Event, str] | None
+) -> None:
     print()
     print("=== Seed credentials (senha em texto plano, apenas para dev) ===")
     for email, password, role, name in USERS:
         print(f"{role.value:<11}: {email} / {password}  ({name})")
     print("==================================================================")
     for spec, event in created_events:
-        print(f"Event: {event.title!r} ({event.id}) at {event.venue}, {spec.rows * spec.seats_per_row} seats")
+        print(
+            f"Event: {event.title!r} ({event.id}) at {event.venue}, {spec.rows * spec.seats_per_row} seats"
+        )
     if gate_demo is not None:
         event, qr_token = gate_demo
         print()
@@ -262,7 +308,9 @@ def main() -> None:
             ).scalar_one_or_none()
 
             if existing_event is not None:
-                print(f"Event already exists at {spec.venue!r} for {spec.organizer_email}, skipping")
+                print(
+                    f"Event already exists at {spec.venue!r} for {spec.organizer_email}, skipping"
+                )
                 continue
 
             event, _ = _create_event_with_seats(db, spec, organizer, users_by_email)

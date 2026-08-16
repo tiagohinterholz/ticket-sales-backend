@@ -14,9 +14,7 @@ class InvalidCredentialsError(Exception):
 
 
 def register_customer(db: Session, email: str, password: str, name: str) -> User:
-    existing = db.execute(
-        select(User).where(User.email == email)
-    ).scalar_one_or_none()
+    existing = db.execute(select(User).where(User.email == email)).scalar_one_or_none()
     if existing is not None:
         raise EmailAlreadyRegisteredError("Email already registered")
 

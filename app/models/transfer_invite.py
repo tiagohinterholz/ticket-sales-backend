@@ -21,9 +21,7 @@ class TransferInvite(Base, UUIDPKMixin, TimestampMixin):
     __tablename__ = "transfer_invites"
 
     ticket_id: Mapped[UUID] = mapped_column(ForeignKey("tickets.id"), nullable=False)
-    from_user_id: Mapped[UUID] = mapped_column(
-        ForeignKey("users.id"), nullable=False
-    )
+    from_user_id: Mapped[UUID] = mapped_column(ForeignKey("users.id"), nullable=False)
     to_email: Mapped[str] = mapped_column(String, nullable=False)
     to_user_id: Mapped[UUID | None] = mapped_column(
         ForeignKey("users.id"), nullable=True

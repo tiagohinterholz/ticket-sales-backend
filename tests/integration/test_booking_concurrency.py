@@ -145,9 +145,7 @@ class TestSweepExpiredHolds:
         assert refreshed_seat.status == SeatStatus.AVAILABLE
         assert refreshed_seat.current_ticket_id is None
 
-    def test_sweep_expired_holds_does_not_touch_valid_holds(
-        self, db_session: Session
-    ):
+    def test_sweep_expired_holds_does_not_touch_valid_holds(self, db_session: Session):
         organizer = make_user(db_session, Role.ORGANIZER)
         customer = make_user(db_session, Role.CUSTOMER)
         event = make_event(db_session, organizer)

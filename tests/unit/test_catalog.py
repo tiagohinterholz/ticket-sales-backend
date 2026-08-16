@@ -43,8 +43,7 @@ class TestSearchMovies:
                 tmdb_id=603,
                 title="The Matrix",
                 poster_url=(
-                    "https://image.tmdb.org/t/p/w500"
-                    "/f89U3ADr1oiB1s9GkdPOEpXUk5H.jpg"
+                    "https://image.tmdb.org/t/p/w500/f89U3ADr1oiB1s9GkdPOEpXUk5H.jpg"
                 ),
                 release_date="1999-03-30",
             )

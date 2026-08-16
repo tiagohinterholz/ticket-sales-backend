@@ -34,9 +34,7 @@ class TestListMyTickets:
         transferred_seat = make_seat(
             db_session, event, status=SeatStatus.SOLD, seat_number=4
         )
-        other_seat = make_seat(
-            db_session, event, status=SeatStatus.SOLD, seat_number=5
-        )
+        other_seat = make_seat(db_session, event, status=SeatStatus.SOLD, seat_number=5)
 
         paid_ticket = make_ticket(
             db_session, event, paid_seat, customer, TicketStatus.PAID
@@ -87,13 +85,15 @@ class TestGetTicketDetail:
         event = make_event(db_session, organizer)
         seat = make_seat(db_session, event, status=SeatStatus.SOLD)
         ticket = make_ticket(
-            db_session, event, seat, customer, TicketStatus.PAID,
+            db_session,
+            event,
+            seat,
+            customer,
+            TicketStatus.PAID,
             paid_at=datetime.now(UTC),
         )
 
-        response = client.get(
-            f"/tickets/{ticket.id}", headers=auth_headers(customer)
-        )
+        response = client.get(f"/tickets/{ticket.id}", headers=auth_headers(customer))
 
         assert response.status_code == 200
         body = response.json()
@@ -110,7 +110,11 @@ class TestGetTicketDetail:
         event = make_event(db_session, organizer)
         seat = make_seat(db_session, event, status=SeatStatus.SOLD)
         ticket = make_ticket(
-            db_session, event, seat, customer, TicketStatus.PAID,
+            db_session,
+            event,
+            seat,
+            customer,
+            TicketStatus.PAID,
             paid_at=datetime.now(UTC),
         )
 
@@ -131,13 +135,16 @@ class TestGetTicketDetail:
         event = make_event(db_session, organizer)
         seat = make_seat(db_session, event, status=SeatStatus.SOLD)
         ticket = make_ticket(
-            db_session, event, seat, customer, TicketStatus.USED,
-            paid_at=datetime.now(UTC), used_at=datetime.now(UTC),
+            db_session,
+            event,
+            seat,
+            customer,
+            TicketStatus.USED,
+            paid_at=datetime.now(UTC),
+            used_at=datetime.now(UTC),
         )
 
-        response = client.get(
-            f"/tickets/{ticket.id}", headers=auth_headers(customer)
-        )
+        response = client.get(f"/tickets/{ticket.id}", headers=auth_headers(customer))
 
         assert response.status_code == 200
         assert response.json()["qr_token"] is None
@@ -150,13 +157,16 @@ class TestGetTicketDetail:
         event = make_event(db_session, organizer)
         seat = make_seat(db_session, event, status=SeatStatus.AVAILABLE)
         ticket = make_ticket(
-            db_session, event, seat, customer, TicketStatus.CANCELLED,
-            paid_at=datetime.now(UTC), cancelled_at=datetime.now(UTC),
+            db_session,
+            event,
+            seat,
+            customer,
+            TicketStatus.CANCELLED,
+            paid_at=datetime.now(UTC),
+            cancelled_at=datetime.now(UTC),
         )
 
-        response = client.get(
-            f"/tickets/{ticket.id}", headers=auth_headers(customer)
-        )
+        response = client.get(f"/tickets/{ticket.id}", headers=auth_headers(customer))
 
         assert response.status_code == 200
         assert response.json()["qr_token"] is None
@@ -169,13 +179,15 @@ class TestGetTicketDetail:
         event = make_event(db_session, organizer)
         seat = make_seat(db_session, event, status=SeatStatus.SOLD)
         ticket = make_ticket(
-            db_session, event, seat, customer, TicketStatus.TRANSFERRED,
+            db_session,
+            event,
+            seat,
+            customer,
+            TicketStatus.TRANSFERRED,
             paid_at=datetime.now(UTC),
         )
 
-        response = client.get(
-            f"/tickets/{ticket.id}", headers=auth_headers(customer)
-        )
+        response = client.get(f"/tickets/{ticket.id}", headers=auth_headers(customer))
 
         assert response.status_code == 200
         assert response.json()["qr_token"] is None
@@ -189,7 +201,11 @@ class TestGetTicketDetail:
         event = make_event(db_session, organizer)
         seat = make_seat(db_session, event, status=SeatStatus.SOLD)
         ticket = make_ticket(
-            db_session, event, seat, owner, TicketStatus.PAID,
+            db_session,
+            event,
+            seat,
+            owner,
+            TicketStatus.PAID,
             paid_at=datetime.now(UTC),
         )
 
@@ -218,7 +234,11 @@ class TestGetTicketDetail:
         event = make_event(db_session, organizer)
         seat = make_seat(db_session, event, status=SeatStatus.SOLD)
         ticket = make_ticket(
-            db_session, event, seat, customer, TicketStatus.PAID,
+            db_session,
+            event,
+            seat,
+            customer,
+            TicketStatus.PAID,
             paid_at=datetime.now(UTC),
         )
 
@@ -238,7 +258,11 @@ class TestCancelTicketEndpoint:
         )
         seat = make_seat(db_session, event, status=SeatStatus.SOLD)
         ticket = make_ticket(
-            db_session, event, seat, customer, TicketStatus.PAID,
+            db_session,
+            event,
+            seat,
+            customer,
+            TicketStatus.PAID,
             paid_at=datetime.now(UTC),
         )
 
@@ -262,7 +286,11 @@ class TestCancelTicketEndpoint:
         )
         seat = make_seat(db_session, event, status=SeatStatus.SOLD)
         ticket = make_ticket(
-            db_session, event, seat, customer, TicketStatus.PAID,
+            db_session,
+            event,
+            seat,
+            customer,
+            TicketStatus.PAID,
             paid_at=datetime.now(UTC),
         )
 
@@ -283,8 +311,13 @@ class TestCancelTicketEndpoint:
         )
         seat = make_seat(db_session, event, status=SeatStatus.SOLD)
         ticket = make_ticket(
-            db_session, event, seat, customer, TicketStatus.USED,
-            paid_at=datetime.now(UTC), used_at=datetime.now(UTC),
+            db_session,
+            event,
+            seat,
+            customer,
+            TicketStatus.USED,
+            paid_at=datetime.now(UTC),
+            used_at=datetime.now(UTC),
         )
 
         response = client.post(
@@ -303,7 +336,11 @@ class TestCancelTicketEndpoint:
         )
         seat = make_seat(db_session, event, status=SeatStatus.SOLD)
         ticket = make_ticket(
-            db_session, event, seat, customer, TicketStatus.TRANSFERRED,
+            db_session,
+            event,
+            seat,
+            customer,
+            TicketStatus.TRANSFERRED,
             paid_at=datetime.now(UTC),
         )
 

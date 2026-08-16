@@ -43,9 +43,7 @@ def create_transfer_invite_endpoint(
             status_code=status.HTTP_404_NOT_FOUND, detail="Ticket not found"
         ) from exc
     try:
-        return transfer.create_invite(
-            db, ticket.id, current_user.id, payload.to_email
-        )
+        return transfer.create_invite(db, ticket.id, current_user.id, payload.to_email)
     except transfer.InvalidTicketStateError as exc:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc)
@@ -93,9 +91,7 @@ def accept_transfer_invite_endpoint(
         transfer.TransferInviteNotPendingError,
         transfer.TransferInviteExpiredError,
     ) as exc:
-        raise HTTPException(
-            status_code=status.HTTP_410_GONE, detail=str(exc)
-        ) from exc
+        raise HTTPException(status_code=status.HTTP_410_GONE, detail=str(exc)) from exc
     except transfer.InvalidTicketStateError as exc:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc)
@@ -115,9 +111,7 @@ def decline_transfer_invite_endpoint(
             status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)
         ) from exc
     except transfer.TransferInviteNotPendingError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_410_GONE, detail=str(exc)
-        ) from exc
+        raise HTTPException(status_code=status.HTTP_410_GONE, detail=str(exc)) from exc
 
 
 @router.post("/transfers/{token}/cancel", response_model=TransferInviteRead)
@@ -137,6 +131,4 @@ def cancel_transfer_invite_endpoint(
             status_code=status.HTTP_403_FORBIDDEN, detail=str(exc)
         ) from exc
     except transfer.TransferInviteNotPendingError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_410_GONE, detail=str(exc)
-        ) from exc
+        raise HTTPException(status_code=status.HTTP_410_GONE, detail=str(exc)) from exc

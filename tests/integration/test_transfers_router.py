@@ -27,7 +27,11 @@ class TestCreateTransferInvite:
         event = make_event(db_session, organizer)
         seat = make_seat(db_session, event, status=SeatStatus.SOLD)
         ticket = make_ticket(
-            db_session, event, seat, owner, TicketStatus.PAID,
+            db_session,
+            event,
+            seat,
+            owner,
+            TicketStatus.PAID,
             paid_at=datetime.now(UTC),
         )
 
@@ -69,7 +73,11 @@ class TestCreateTransferInvite:
         event = make_event(db_session, organizer)
         seat = make_seat(db_session, event, status=SeatStatus.SOLD)
         ticket = make_ticket(
-            db_session, event, seat, owner, TicketStatus.PAID,
+            db_session,
+            event,
+            seat,
+            owner,
+            TicketStatus.PAID,
             paid_at=datetime.now(UTC),
         )
 
@@ -89,7 +97,11 @@ class TestCreateTransferInvite:
         event = make_event(db_session, organizer)
         seat = make_seat(db_session, event, status=SeatStatus.SOLD)
         ticket = make_ticket(
-            db_session, event, seat, owner, TicketStatus.PAID,
+            db_session,
+            event,
+            seat,
+            owner,
+            TicketStatus.PAID,
             paid_at=datetime.now(UTC),
         )
 
@@ -109,7 +121,11 @@ class TestCreateTransferInvite:
         event = make_event(db_session, organizer)
         seat = make_seat(db_session, event, status=SeatStatus.SOLD)
         ticket = make_ticket(
-            db_session, event, seat, owner, TicketStatus.PAID,
+            db_session,
+            event,
+            seat,
+            owner,
+            TicketStatus.PAID,
             paid_at=datetime.now(UTC),
         )
 
@@ -128,22 +144,22 @@ class TestListIncomingOutgoingTransferInvites:
     ):
         organizer = make_user(db_session, Role.ORGANIZER)
         owner = make_user(db_session, Role.CUSTOMER)
-        recipient = make_user(
-            db_session, Role.CUSTOMER, email="recipient@example.com"
-        )
+        recipient = make_user(db_session, Role.CUSTOMER, email="recipient@example.com")
         event = make_event(db_session, organizer)
         seat = make_seat(db_session, event, status=SeatStatus.SOLD)
         ticket = make_ticket(
-            db_session, event, seat, owner, TicketStatus.PAID,
+            db_session,
+            event,
+            seat,
+            owner,
+            TicketStatus.PAID,
             paid_at=datetime.now(UTC),
         )
         invite = make_transfer_invite(
             db_session, ticket, owner, to_email="recipient@example.com"
         )
 
-        response = client.get(
-            "/transfers/incoming", headers=auth_headers(recipient)
-        )
+        response = client.get("/transfers/incoming", headers=auth_headers(recipient))
 
         assert response.status_code == 200
         body = response.json()
@@ -160,14 +176,16 @@ class TestListIncomingOutgoingTransferInvites:
         event = make_event(db_session, organizer)
         seat = make_seat(db_session, event, status=SeatStatus.SOLD)
         ticket = make_ticket(
-            db_session, event, seat, owner, TicketStatus.PAID,
+            db_session,
+            event,
+            seat,
+            owner,
+            TicketStatus.PAID,
             paid_at=datetime.now(UTC),
         )
         make_transfer_invite(db_session, ticket, owner, to_email="someone@example.com")
 
-        response = client.get(
-            "/transfers/incoming", headers=auth_headers(unrelated)
-        )
+        response = client.get("/transfers/incoming", headers=auth_headers(unrelated))
 
         assert response.status_code == 200
         assert response.json() == []
@@ -177,9 +195,7 @@ class TestListIncomingOutgoingTransferInvites:
     ):
         organizer = make_user(db_session, Role.ORGANIZER)
         owner = make_user(db_session, Role.CUSTOMER)
-        recipient = make_user(
-            db_session, Role.CUSTOMER, email="recipient@example.com"
-        )
+        recipient = make_user(db_session, Role.CUSTOMER, email="recipient@example.com")
         event = make_event(db_session, organizer)
         declined_seat = make_seat(
             db_session, event, status=SeatStatus.SOLD, seat_number=1
@@ -188,27 +204,37 @@ class TestListIncomingOutgoingTransferInvites:
             db_session, event, status=SeatStatus.SOLD, seat_number=2
         )
         declined_ticket = make_ticket(
-            db_session, event, declined_seat, owner, TicketStatus.PAID,
+            db_session,
+            event,
+            declined_seat,
+            owner,
+            TicketStatus.PAID,
             paid_at=datetime.now(UTC),
         )
         expired_ticket = make_ticket(
-            db_session, event, expired_seat, owner, TicketStatus.PAID,
+            db_session,
+            event,
+            expired_seat,
+            owner,
+            TicketStatus.PAID,
             paid_at=datetime.now(UTC),
         )
         make_transfer_invite(
-            db_session, declined_ticket, owner,
+            db_session,
+            declined_ticket,
+            owner,
             to_email="recipient@example.com",
             status=TransferInviteStatus.DECLINED,
         )
         make_transfer_invite(
-            db_session, expired_ticket, owner,
+            db_session,
+            expired_ticket,
+            owner,
             to_email="recipient@example.com",
             expires_at=datetime.now(UTC) - timedelta(hours=1),
         )
 
-        response = client.get(
-            "/transfers/incoming", headers=auth_headers(recipient)
-        )
+        response = client.get("/transfers/incoming", headers=auth_headers(recipient))
 
         assert response.status_code == 200
         assert response.json() == []
@@ -221,7 +247,11 @@ class TestListIncomingOutgoingTransferInvites:
         event = make_event(db_session, organizer)
         seat = make_seat(db_session, event, status=SeatStatus.SOLD)
         ticket = make_ticket(
-            db_session, event, seat, owner, TicketStatus.PAID,
+            db_session,
+            event,
+            seat,
+            owner,
+            TicketStatus.PAID,
             paid_at=datetime.now(UTC),
         )
         invite = make_transfer_invite(db_session, ticket, owner)
@@ -243,9 +273,7 @@ class TestListIncomingOutgoingTransferInvites:
     ):
         gate_staff = make_user(db_session, Role.GATE_STAFF)
 
-        response = client.get(
-            "/transfers/outgoing", headers=auth_headers(gate_staff)
-        )
+        response = client.get("/transfers/outgoing", headers=auth_headers(gate_staff))
 
         assert response.status_code == 403
 
@@ -260,7 +288,11 @@ class TestViewTransferInvite:
         event = make_event(db_session, organizer)
         seat = make_seat(db_session, event, status=SeatStatus.SOLD)
         ticket = make_ticket(
-            db_session, event, seat, owner, TicketStatus.PAID,
+            db_session,
+            event,
+            seat,
+            owner,
+            TicketStatus.PAID,
             paid_at=datetime.now(UTC),
         )
         invite = make_transfer_invite(db_session, ticket, owner)
@@ -283,7 +315,11 @@ class TestViewTransferInvite:
         event = make_event(db_session, organizer)
         seat = make_seat(db_session, event, status=SeatStatus.SOLD)
         ticket = make_ticket(
-            db_session, event, seat, owner, TicketStatus.PAID,
+            db_session,
+            event,
+            seat,
+            owner,
+            TicketStatus.PAID,
             paid_at=datetime.now(UTC),
         )
         invite = make_transfer_invite(db_session, ticket, owner)
@@ -292,7 +328,9 @@ class TestViewTransferInvite:
 
         assert response.status_code == 401
 
-    def test_view_nonexistent_token_returns_404(self, client: TestClient, db_session: Session):
+    def test_view_nonexistent_token_returns_404(
+        self, client: TestClient, db_session: Session
+    ):
         customer = make_user(db_session, Role.CUSTOMER)
 
         response = client.get(
@@ -312,7 +350,11 @@ class TestAcceptTransferInvite:
         event = make_event(db_session, organizer)
         seat = make_seat(db_session, event, status=SeatStatus.SOLD)
         ticket = make_ticket(
-            db_session, event, seat, owner, TicketStatus.PAID,
+            db_session,
+            event,
+            seat,
+            owner,
+            TicketStatus.PAID,
             paid_at=datetime.now(UTC),
         )
         db_session.refresh(seat)
@@ -349,13 +391,19 @@ class TestAcceptTransferInvite:
         original_ticket = next(t for t in owner_tickets if t["id"] == str(ticket.id))
         assert original_ticket["status"] == "TRANSFERRED"
 
-    def test_accept_without_auth_returns_401(self, client: TestClient, db_session: Session):
+    def test_accept_without_auth_returns_401(
+        self, client: TestClient, db_session: Session
+    ):
         organizer = make_user(db_session, Role.ORGANIZER)
         owner = make_user(db_session, Role.CUSTOMER)
         event = make_event(db_session, organizer)
         seat = make_seat(db_session, event, status=SeatStatus.SOLD)
         ticket = make_ticket(
-            db_session, event, seat, owner, TicketStatus.PAID,
+            db_session,
+            event,
+            seat,
+            owner,
+            TicketStatus.PAID,
             paid_at=datetime.now(UTC),
         )
         invite = make_transfer_invite(db_session, ticket, owner)
@@ -375,18 +423,26 @@ class TestAcceptTransferInvite:
 
         assert response.status_code == 404
 
-    def test_accept_expired_invite_returns_410(self, client: TestClient, db_session: Session):
+    def test_accept_expired_invite_returns_410(
+        self, client: TestClient, db_session: Session
+    ):
         organizer = make_user(db_session, Role.ORGANIZER)
         owner = make_user(db_session, Role.CUSTOMER)
         recipient = make_user(db_session, Role.CUSTOMER)
         event = make_event(db_session, organizer)
         seat = make_seat(db_session, event, status=SeatStatus.SOLD)
         ticket = make_ticket(
-            db_session, event, seat, owner, TicketStatus.PAID,
+            db_session,
+            event,
+            seat,
+            owner,
+            TicketStatus.PAID,
             paid_at=datetime.now(UTC),
         )
         invite = make_transfer_invite(
-            db_session, ticket, owner,
+            db_session,
+            ticket,
+            owner,
             expires_at=datetime.now(UTC) - timedelta(hours=1),
         )
 
@@ -407,7 +463,11 @@ class TestDeclineTransferInvite:
         event = make_event(db_session, organizer)
         seat = make_seat(db_session, event, status=SeatStatus.SOLD)
         ticket = make_ticket(
-            db_session, event, seat, owner, TicketStatus.PAID,
+            db_session,
+            event,
+            seat,
+            owner,
+            TicketStatus.PAID,
             paid_at=datetime.now(UTC),
         )
         invite = make_transfer_invite(db_session, ticket, owner)
@@ -421,13 +481,19 @@ class TestDeclineTransferInvite:
         unchanged_ticket = db_session.get(Ticket, ticket.id)
         assert unchanged_ticket.status == TicketStatus.PAID
 
-    def test_decline_without_auth_returns_401(self, client: TestClient, db_session: Session):
+    def test_decline_without_auth_returns_401(
+        self, client: TestClient, db_session: Session
+    ):
         organizer = make_user(db_session, Role.ORGANIZER)
         owner = make_user(db_session, Role.CUSTOMER)
         event = make_event(db_session, organizer)
         seat = make_seat(db_session, event, status=SeatStatus.SOLD)
         ticket = make_ticket(
-            db_session, event, seat, owner, TicketStatus.PAID,
+            db_session,
+            event,
+            seat,
+            owner,
+            TicketStatus.PAID,
             paid_at=datetime.now(UTC),
         )
         invite = make_transfer_invite(db_session, ticket, owner)
@@ -445,7 +511,11 @@ class TestDeclineTransferInvite:
         event = make_event(db_session, organizer)
         seat = make_seat(db_session, event, status=SeatStatus.SOLD)
         ticket = make_ticket(
-            db_session, event, seat, owner, TicketStatus.PAID,
+            db_session,
+            event,
+            seat,
+            owner,
+            TicketStatus.PAID,
             paid_at=datetime.now(UTC),
         )
         invite = make_transfer_invite(
@@ -469,7 +539,11 @@ class TestCancelTransferInvite:
         event = make_event(db_session, organizer)
         seat = make_seat(db_session, event, status=SeatStatus.SOLD)
         ticket = make_ticket(
-            db_session, event, seat, owner, TicketStatus.PAID,
+            db_session,
+            event,
+            seat,
+            owner,
+            TicketStatus.PAID,
             paid_at=datetime.now(UTC),
         )
         invite = make_transfer_invite(db_session, ticket, owner)
@@ -488,14 +562,20 @@ class TestCancelTransferInvite:
         unchanged_ticket = db_session.get(Ticket, ticket.id)
         assert unchanged_ticket.status == TicketStatus.PAID
 
-    def test_cancel_by_non_owner_returns_403(self, client: TestClient, db_session: Session):
+    def test_cancel_by_non_owner_returns_403(
+        self, client: TestClient, db_session: Session
+    ):
         organizer = make_user(db_session, Role.ORGANIZER)
         owner = make_user(db_session, Role.CUSTOMER)
         stranger = make_user(db_session, Role.CUSTOMER)
         event = make_event(db_session, organizer)
         seat = make_seat(db_session, event, status=SeatStatus.SOLD)
         ticket = make_ticket(
-            db_session, event, seat, owner, TicketStatus.PAID,
+            db_session,
+            event,
+            seat,
+            owner,
+            TicketStatus.PAID,
             paid_at=datetime.now(UTC),
         )
         invite = make_transfer_invite(db_session, ticket, owner)
@@ -508,13 +588,19 @@ class TestCancelTransferInvite:
         unchanged_invite = db_session.get(type(invite), invite.id)
         assert unchanged_invite.status == TransferInviteStatus.PENDING
 
-    def test_cancel_without_auth_returns_401(self, client: TestClient, db_session: Session):
+    def test_cancel_without_auth_returns_401(
+        self, client: TestClient, db_session: Session
+    ):
         organizer = make_user(db_session, Role.ORGANIZER)
         owner = make_user(db_session, Role.CUSTOMER)
         event = make_event(db_session, organizer)
         seat = make_seat(db_session, event, status=SeatStatus.SOLD)
         ticket = make_ticket(
-            db_session, event, seat, owner, TicketStatus.PAID,
+            db_session,
+            event,
+            seat,
+            owner,
+            TicketStatus.PAID,
             paid_at=datetime.now(UTC),
         )
         invite = make_transfer_invite(db_session, ticket, owner)

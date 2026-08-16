@@ -88,9 +88,7 @@ def list_events(
     price_max: int | None = None,
     db: Session = Depends(get_db),
 ) -> EventListResponse:
-    events = event_service.list_events(
-        db, q, date_from, date_to, price_min, price_max
-    )
+    events = event_service.list_events(db, q, date_from, date_to, price_min, price_max)
     return EventListResponse(items=events, total=len(events))
 
 

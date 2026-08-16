@@ -81,9 +81,7 @@ class TestMe:
         )
         token = login_response.json()["access_token"]
 
-        response = client.get(
-            "/auth/me", headers={"Authorization": f"Bearer {token}"}
-        )
+        response = client.get("/auth/me", headers={"Authorization": f"Bearer {token}"})
 
         assert response.status_code == 200
         body = response.json()

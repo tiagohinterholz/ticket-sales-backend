@@ -125,9 +125,13 @@ Todo model tem `id` e bookkeeping de `created_at`/`updated_at`. Em vez de repeti
 class UUIDPKMixin:
     id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
 
+
 class TimestampMixin:
     created_at: Mapped[datetime] = mapped_column(server_default=func.now())
-    updated_at: Mapped[datetime] = mapped_column(server_default=func.now(), onupdate=func.now())
+    updated_at: Mapped[datetime] = mapped_column(
+        server_default=func.now(), onupdate=func.now()
+    )
+
 
 # cada model: class Event(Base, UUIDPKMixin, TimestampMixin): ...
 ```
